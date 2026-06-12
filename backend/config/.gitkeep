@@ -1,0 +1,2 @@
+# This directory stores local credential files. These are git-ignored.
+# Do NOT commit *.json files from this directory.
