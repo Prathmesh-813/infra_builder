@@ -107,7 +107,7 @@ export interface ResourceDefinition {
   color: string;
   bgColor: string;
   borderColor: string;
-  category: 'Compute' | 'Storage' | 'Network' | 'Database' | 'Serverless' | 'Security' | 'Monitoring' | 'Analytics' | 'AI/ML' | 'DevOps' | 'Messaging' | 'Inventory' | 'Packages' | 'Services' | 'Files' | 'Commands' | 'Users' | 'Deployment' | 'Docker' | 'Control';
+  category: 'Compute' | 'Storage' | 'Network' | 'Database' | 'Serverless' | 'Security' | 'Monitoring' | 'Analytics' | 'AI/ML' | 'DevOps' | 'Messaging' | 'Inventory' | 'Packages' | 'Services' | 'Files' | 'Commands' | 'Users' | 'Deployment' | 'Docker' | 'Control' | 'Alarms' | 'Dashboards' | 'Notifications' | 'Logs' | 'Synthetics';
   fields: ResourceField[];
   description: string;
   ports: ResourcePort[];

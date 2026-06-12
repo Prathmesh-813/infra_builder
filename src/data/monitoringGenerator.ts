@@ -60,7 +60,6 @@ function compositeAlarmGenerator(node: GraphNode): string {
 
 function dashboardGenerator(node: GraphNode): string {
   const name = node.data.fields?.name || node.data.label;
-  const displayName = node.data.fields?.displayName ?? 'Infrastructure Overview';
   const period = node.data.fields?.period ?? 300;
   const timezone = node.data.fields?.timezone ?? 'UTC';
 
@@ -155,28 +154,12 @@ function logMetricFilterGenerator(node: GraphNode): string {
 
 function syntheticsCanaryGenerator(node: GraphNode): string {
   const name = node.data.fields?.name || node.data.label;
-  const url = node.data.fields?.url ?? '';
   const scheduleFrequency = node.data.fields?.scheduleFrequency ?? 5;
   const runtime = node.data.fields?.runtime ?? 'syn-nodejs-puppeteer-4.0';
   const memorySize = node.data.fields?.memorySize ?? 1000;
   const activeTracing = node.data.fields?.activeTracing ?? false;
   const s3Bucket = node.data.fields?.s3Bucket ?? '';
   const alarmSnsTopicArn = node.data.fields?.alarmSnsTopicArn ?? '';
-
-  const script = `const synthetics = require('Synthetics');
-const log = require('SyntheticsLogger');
-
-const pageLoadBlueprint = async function() {
-  const page = await synthetics.getPage();
-  const url = '${url}';
-  await page.goto(url, { waitUntil: 'networkidle0', timeout: 30000 });
-  await page.waitFor(1500);
-  await synthetics.takeScreenshot('loaded', 'screenshot');
-};
-
-exports.handler = async () => {
-  return await pageLoadBlueprint();
-};`;
 
   const s3Block = s3Bucket ? `  s3_bucket = "${s3Bucket}"\n` : '';
   const alarmBlock = alarmSnsTopicArn ? `\n  alarm_sns_topic_arn = "${alarmSnsTopicArn}"` : '';
