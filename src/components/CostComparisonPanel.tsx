@@ -1,10 +1,10 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import {
-  X, BarChart3, Trophy, Zap, Trash2,
-  ChevronDown, ChevronUp, Settings2, RefreshCw, Info, TrendingDown, Loader,
+  X, BarChart3, Trophy, Zap, Trash2, Download,
+  ChevronDown, ChevronUp, Settings2, RefreshCw, Info, TrendingDown, Loader, FileText, FileSpreadsheet,
 } from 'lucide-react';
 import {
-  COMPARISON_SERVICES, ComparisonProvider, ProviderPricing, InstanceOption,
+  COMPARISON_SERVICES, ComparisonProvider, ProviderPricing, InstanceOption, PROVIDER_META,
 } from '../data/costComparisonData';
 import { computeComparison, getDefaultConfigs, ComparisonResult } from '../utils/costComparisonEngine';
 import AWSCredentialsPanel from './AWSCredentialsPanel';
@@ -14,14 +14,7 @@ import { applyLivePrices, clearLivePriceCache, ProviderLivePrices, resolveAllLiv
 import { useCompareCardLivePrices } from '../hooks/useCompareCardLivePrice';
 import AzurePricingPanel from './AzurePricingPanel';
 import ProviderIcon from './ProviderIcon';
-
-// ─── Provider palette ─────────────────────────────────────────────────────────
-export const PROVIDER_META: Record<ComparisonProvider, { label: string; icon: string; color: string; bg: string; border: string; ring: string }> = {
-  aws:    { label: 'AWS',         icon: 'aws', color: '#f97316', bg: 'rgba(249,115,22,0.10)', border: 'rgba(249,115,22,0.35)', ring: 'rgba(249,115,22,0.25)' },
-  azure:  { label: 'Azure',       icon: 'azure', color: '#3b82f6', bg: 'rgba(59,130,246,0.10)', border: 'rgba(59,130,246,0.35)', ring: 'rgba(59,130,246,0.25)' },
-  gcp:    { label: 'GCP',         icon: 'gcp', color: '#ef4444', bg: 'rgba(239,68,68,0.10)',  border: 'rgba(239,68,68,0.35)',  ring: 'rgba(239,68,68,0.25)'  },
-  onprem: { label: 'On-Premises', icon: 'onprem', color: '#8b5cf6', bg: 'rgba(139,92,246,0.10)', border: 'rgba(139,92,246,0.35)', ring: 'rgba(139,92,246,0.25)' },
-};
+import { buildExportData, exportToPDF, exportToExcel } from '../utils/costReportExport';
 
 interface AddedService {
   uid: string;
@@ -518,12 +511,14 @@ function CompareCard({ added, onRemove, onReconfigure, awsLiveEnabled, azureLive
 
 // ─── Main Panel ───────────────────────────────────────────────────────────────
 export default function CostComparisonPanel() {
+  const containerRef = useRef<HTMLDivElement>(null);
   const [addedServices, setAddedServices] = useState<AddedService[]>([]);
   const [pendingDrop, setPendingDrop] = useState<{ serviceId: string } | null>(null);
   const [reconfiguringUid, setReconfiguringUid] = useState<string | null>(null);
   const [awsLiveEnabled, setAwsLiveEnabled] = useState(false);
   const [azureLiveEnabled, setAzureLiveEnabled] = useState(false);
   const [gcpLiveEnabled, setGcpLiveEnabled] = useState(false);
+  const [exporting, setExporting] = useState<'pdf' | 'excel' | null>(null);
 
   const [awsRegion, setAwsRegion] = useState('us-east-1');
   const [azureRegion, setAzureRegion] = useState('eastus');
@@ -616,8 +611,33 @@ export default function CostComparisonPanel() {
   const cheapest = providerTotals[0];
   const mostExpensive = providerTotals[providerTotals.length - 1];
 
+  const handleExportPDF = useCallback(async () => {
+    if (!containerRef.current) return;
+    setExporting('pdf');
+    try {
+      await exportToPDF(containerRef.current, `cost-comparison-${Date.now()}`);
+    } catch (e) {
+      console.error('PDF export failed:', e);
+    }
+    setExporting(null);
+  }, []);
+
+  const handleExportExcel = useCallback(() => {
+    if (results.length === 0) return;
+    setExporting('excel');
+    try {
+      const data = buildExportData(results, providerTotals);
+      exportToExcel(data, `cost-comparison-${Date.now()}`);
+    } catch (e) {
+      console.error('Excel export failed:', e);
+    }
+    setExporting(null);
+  }, [results, providerTotals]);
+
+  const [showExportMenu, setShowExportMenu] = useState(false);
+
   return (
-    <div className="flex flex-col h-full overflow-hidden" style={{ background: 'var(--bg-app)' }}>
+    <div ref={containerRef} className="flex flex-col h-full overflow-hidden" style={{ background: 'var(--bg-app)' }}>
 
       {/* ── Live Pricing credentials ────────────────────────────────────────── */}
       <div className="px-4 pt-3 pb-2 flex-shrink-0 space-y-1.5" style={{ borderBottom: '1px solid var(--border)' }}>
@@ -668,11 +688,43 @@ export default function CostComparisonPanel() {
                 Total Monthly Cost — {addedServices.length} service{addedServices.length !== 1 ? 's' : ''}
               </span>
             </div>
-            <button onClick={() => setAddedServices([])}
-              className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg transition-colors hover:bg-white/5"
-              style={{ color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
-              <RefreshCw size={11} /> Clear all
-            </button>
+            <div className="flex items-center gap-2">
+              {/* Export dropdown */}
+              <div className="relative">
+                <button onClick={() => setShowExportMenu(m => !m)}
+                  disabled={exporting !== null}
+                  className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg transition-colors hover:bg-white/5 disabled:opacity-50"
+                  style={{ color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
+                  <Download size={11} />
+                  {exporting === 'pdf' ? 'Exporting PDF...' : exporting === 'excel' ? 'Exporting Excel...' : 'Export'}
+                </button>
+                {showExportMenu && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setShowExportMenu(false)} />
+                    <div className="absolute right-0 top-full mt-1 z-50 w-44 rounded-xl overflow-hidden shadow-2xl"
+                      style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-strong)' }}>
+                      <button onClick={() => { setShowExportMenu(false); handleExportPDF(); }}
+                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs font-medium transition-colors hover:bg-white/5 text-left"
+                        style={{ color: 'var(--text-primary)' }}>
+                        <FileText size={14} className="text-red-400" />
+                        Export as PDF
+                      </button>
+                      <button onClick={() => { setShowExportMenu(false); handleExportExcel(); }}
+                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs font-medium transition-colors hover:bg-white/5 text-left"
+                        style={{ color: 'var(--text-primary)' }}>
+                        <FileSpreadsheet size={14} className="text-emerald-400" />
+                        Export as Excel (.xlsx)
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+              <button onClick={() => setAddedServices([])}
+                className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg transition-colors hover:bg-white/5"
+                style={{ color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
+                <RefreshCw size={11} /> Clear all
+              </button>
+            </div>
           </div>
 
           {/* Provider cost tiles */}

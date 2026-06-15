@@ -1583,3 +1583,10 @@ export const COMPARISON_SERVICES: ComparisonService[] = [
     ],
   },
 ];
+
+export const PROVIDER_META: Record<ComparisonProvider, { label: string; icon: string; color: string; bg: string; border: string; ring: string }> = {
+  aws:    { label: 'AWS',         icon: 'aws', color: '#f97316', bg: 'rgba(249,115,22,0.10)', border: 'rgba(249,115,22,0.35)', ring: 'rgba(249,115,22,0.25)' },
+  azure:  { label: 'Azure',       icon: 'azure', color: '#3b82f6', bg: 'rgba(59,130,246,0.10)', border: 'rgba(59,130,246,0.35)', ring: 'rgba(59,130,246,0.25)' },
+  gcp:    { label: 'GCP',         icon: 'gcp', color: '#ef4444', bg: 'rgba(239,68,68,0.10)',  border: 'rgba(239,68,68,0.35)',  ring: 'rgba(239,68,68,0.25)'  },
+  onprem: { label: 'On-Premises', icon: 'onprem', color: '#8b5cf6', bg: 'rgba(139,92,246,0.10)', border: 'rgba(139,92,246,0.35)', ring: 'rgba(139,92,246,0.25)' },
+};

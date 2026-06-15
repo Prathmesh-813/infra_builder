@@ -75,7 +75,7 @@ export default function Header({ dashboard, onOpenTemplates, onOpenDiagramScan, 
         </div>
         <div>
           <h1 className="font-bold text-[15px] leading-tight tracking-tight" style={{ color: 'var(--text-primary)' }}>
-            Infrastructure <span className="gradient-text">Visual Builder</span>
+            Infra<span className="gradient-text">Studio</span>
           </h1>
           <div className="flex items-center gap-1.5 mt-0.5">
             {['aws','azure','gcp','onprem'].includes(meta.icon) ? <ProviderIcon provider={meta.icon as any} size={14} /> : <span className="text-[10px]">{meta.icon}</span>}

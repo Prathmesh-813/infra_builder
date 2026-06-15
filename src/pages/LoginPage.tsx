@@ -222,7 +222,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
 
         {/* Footer */}
         <p className="text-center text-[10px] mt-6 login-fade-in" style={{ color: 'var(--text-faint)' }}>
-          © 2026 InfraStudio — Infrastructure Visual Builder
+          © 2026 InfraStudio
         </p>
       </div>
     </div>

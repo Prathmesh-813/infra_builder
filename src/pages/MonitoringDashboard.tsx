@@ -1,20 +1,30 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import {
-  Activity, AlertTriangle, DollarSign, RefreshCw,
-  Shield, TrendingUp, TrendingDown,
+  Activity, AlertTriangle, RefreshCw,
+  Shield,
   CheckCircle2, XCircle, ChevronDown, ChevronUp,
-  Loader, BarChart3, Cpu, HardDrive, MemoryStick as Memory,
-  Wifi, Clock, ArrowUpRight, ArrowDownRight, GitCompare,
-  Info,
+  Loader, Cpu, HardDrive, MemoryStick as Memory,
+  Wifi, Clock, ArrowUpRight, GitCompare,
+  Gauge, FileCheck, History, Bell, Settings, Play,
+  Pause, Calendar, UserCheck, Timer,
+  UserPlus,
 } from 'lucide-react';
 import ProviderIcon from '../components/ProviderIcon';
 import {
-  generateHealthMetrics, generateDriftAlerts, generateCostAnomalies,
+  generateHealthMetrics, generateDriftAlerts,
+  generateComplianceChecks, generateComplianceSummary,
+  generateResourceTrends, generateIncidents, generateIncidentSummary,
+  evaluateAlertRules, DEFAULT_ALERT_RULES,
   generateMonitoringSummary,
+  generateTickets, generateTicketSummary, TEAM_MEMBERS,
 } from '../utils/monitoringEngine';
-import type { HealthMetric, DriftAlert, CostAnomaly } from '../types/monitoring';
+import type {
+  HealthMetric, DriftAlert,
+  ComplianceCheck, ResourceTrend,
+  Incident, AlertRule, Ticket, TeamMember,
+} from '../types/monitoring';
 
-type Tab = 'health' | 'drift' | 'cost';
+type Tab = 'health' | 'drift' | 'compliance' | 'trends' | 'incidents' | 'tickets';
 
 const PROVIDER_META: Record<string, { label: string; icon: string; color: string; bg: string; gradient: string }> = {
   aws:   { label: 'AWS',   icon: 'aws', color: '#fb923c', bg: 'rgba(249,115,22,0.12)', gradient: 'linear-gradient(135deg, #f97316, #fb923c)' },
@@ -241,101 +251,507 @@ function DriftCard({ alert }: { alert: DriftAlert }) {
   );
 }
 
-function CostCard({ anomaly }: { anomaly: CostAnomaly }) {
+
+
+function ComplianceCard({ check }: { check: ComplianceCheck }) {
   const [expanded, setExpanded] = useState(false);
-  const meta = PROVIDER_META[anomaly.provider] ?? PROVIDER_META.aws;
-  const isOver = anomaly.deviation > 0;
-  const maxCost = Math.max(anomaly.estimatedCost, anomaly.actualCost);
+  const meta = PROVIDER_META[check.provider] ?? PROVIDER_META.aws;
+  const statusColor = check.status === 'pass' ? '#34d399' : check.status === 'fail' ? '#ef4444' : check.status === 'na' ? '#6b7280' : '#fbbf24';
+  const statusLabel = check.status === 'pass' ? 'Passed' : check.status === 'fail' ? 'Failed' : check.status === 'na' ? 'N/A' : 'Error';
 
   return (
     <div className="group rounded-2xl border transition-all duration-300 hover:shadow-lg hover:shadow-black/20"
-      style={{
-        background: 'var(--bg-surface)',
-        borderColor: expanded ? `${isOver ? '#ef4444' : '#34d399'}30` : 'var(--border)',
-      }}>
+      style={{ background: 'var(--bg-surface)', borderColor: expanded ? `${statusColor}30` : 'var(--border)' }}>
       <div className="flex items-center gap-4 px-5 py-4 cursor-pointer select-none"
         onClick={() => setExpanded(e => !e)}>
         <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 transition-all duration-300 group-hover:scale-110"
           style={{ background: meta.bg, border: '1px solid ' + meta.color + '30' }}>
-          {isOver ? <TrendingUp size={20} style={{ color: '#ef4444' }} /> : <TrendingDown size={20} style={{ color: '#34d399' }} />}
+          <ProviderIcon provider={meta.icon as any} size={22} />
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2.5 flex-wrap">
-            <p className="text-sm font-bold truncate" style={{ color: 'var(--text-primary)' }}>{anomaly.serviceName}</p>
+            <p className="text-sm font-bold truncate" style={{ color: 'var(--text-primary)' }}>{check.resourceName}</p>
             <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full"
-              style={{ background: anomaly.severity === 'critical' ? 'rgba(239,68,68,0.15)' : anomaly.severity === 'high' ? 'rgba(249,115,22,0.15)' : 'rgba(234,179,8,0.15)', color: anomaly.severity === 'critical' ? '#ef4444' : anomaly.severity === 'high' ? '#f97316' : '#eab308', border: '1px solid ' + (anomaly.severity === 'critical' ? 'rgba(239,68,68,0.25)' : anomaly.severity === 'high' ? 'rgba(249,115,22,0.25)' : 'rgba(234,179,8,0.25)') }}>
-              {anomaly.severity}
+              style={{ background: statusColor + '15', color: statusColor, border: '1px solid ' + statusColor + '25' }}>
+              {statusLabel}
+            </span>
+            <span className="text-[9px] px-1.5 py-0.5 rounded-full font-medium"
+              style={{ background: 'rgba(99,102,241,0.1)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.2)' }}>
+              {check.severity}
             </span>
           </div>
-          <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-muted)' }}>{meta.label} · {anomaly.period}</p>
+          <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
+            {check.standard} · {check.control}
+          </p>
         </div>
-        <div className="flex items-center gap-4 flex-shrink-0">
-          <div className="text-right">
-            <p className="text-sm font-bold" style={{ color: isOver ? '#ef4444' : '#34d399' }}>
-              {isOver ? '+' : ''}{anomaly.deviationPct}%
-            </p>
-            <p className="text-[9px]" style={{ color: 'var(--text-faint)' }}>vs estimate</p>
+        <div className="flex items-center gap-3 flex-shrink-0">
+          <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)' }}>
+            <Clock size={10} style={{ color: 'var(--text-faint)' }} />
+            <span className="text-[9px] font-medium" style={{ color: 'var(--text-faint)' }}>{Math.floor((Date.now() - new Date(check.checkedAt).getTime()) / 60000)}m ago</span>
           </div>
           <div className="w-7 h-7 flex items-center justify-center rounded-lg transition-all duration-200 group-hover:bg-white/5">
-            {expanded
-              ? <ChevronUp size={15} style={{ color: 'var(--text-muted)' }} />
-              : <ChevronDown size={15} style={{ color: 'var(--text-muted)' }} />}
+            {expanded ? <ChevronUp size={15} style={{ color: 'var(--text-muted)' }} /> : <ChevronDown size={15} style={{ color: 'var(--text-muted)' }} />}
           </div>
         </div>
       </div>
 
       <div className={`overflow-hidden transition-all duration-300 ${expanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
         <div className="px-5 pb-5 pt-1 border-t" style={{ borderColor: 'var(--border-subtle)' }}>
-          <div className="mt-3 space-y-3">
-            <div className="space-y-2">
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[9px] font-semibold" style={{ color: 'var(--text-faint)' }}>Estimated</span>
-                  <span className="text-[10px] font-bold" style={{ color: 'var(--text-primary)' }}>${anomaly.estimatedCost.toFixed(0)}</span>
-                </div>
-                <div className="h-2 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.05)' }}>
-                  <div className="h-full rounded-full transition-all" style={{
-                    width: `${(anomaly.estimatedCost / maxCost) * 100}%`,
-                    background: 'linear-gradient(90deg, #64748b, #94a3b8)',
-                  }} />
+          <div className="mt-3 space-y-2.5">
+            <div className="px-3.5 py-3 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)' }}>
+              <p className="text-[9px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-faint)' }}>Description</p>
+              <p className="text-[11px] mt-1 leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{check.description}</p>
+            </div>
+            {check.status === 'fail' && (
+              <div className="flex items-start gap-2.5 px-3.5 py-3 rounded-xl" style={{ background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.15)' }}>
+                <Shield size={13} className="text-red-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-[10px] font-semibold" style={{ color: '#f87171' }}>Remediation</p>
+                  <p className="text-[9px] mt-0.5 leading-relaxed" style={{ color: 'var(--text-muted)' }}>{check.remediation}</p>
                 </div>
               </div>
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[9px] font-semibold flex items-center gap-1" style={{ color: isOver ? '#f87171' : '#34d399' }}>
-                    {isOver ? <ArrowUpRight size={9} /> : <ArrowDownRight size={9} />}
-                    Actual
-                  </span>
-                  <span className="text-[10px] font-bold" style={{ color: isOver ? '#ef4444' : '#34d399' }}>${anomaly.actualCost.toFixed(0)}</span>
-                </div>
-                <div className="h-2 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.05)' }}>
-                  <div className="h-full rounded-full transition-all" style={{
-                    width: `${(anomaly.actualCost / maxCost) * 100}%`,
-                    background: isOver
-                      ? 'linear-gradient(90deg, #ef4444, #f97316)'
-                      : 'linear-gradient(90deg, #34d399, #10b981)',
-                    boxShadow: '0 0 8px ' + (isOver ? '#ef4444' : '#34d399') + '40',
-                  }} />
-                </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Sparkline({ data, color, height = 32 }: { data: number[]; color: string; height?: number }) {
+  const width = 120;
+  const min = Math.min(...data);
+  const max = Math.max(...data);
+  const range = max - min || 1;
+  const points = data.map((v, i) => `${(i / (data.length - 1)) * width},${height - ((v - min) / range) * (height - 4) - 2}`).join(' ');
+  return (
+    <svg width={width} height={height} className="flex-shrink-0">
+      <polyline points={points} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity={0.8} />
+    </svg>
+  );
+}
+
+function TrendCard({ trend }: { trend: ResourceTrend }) {
+  const [expanded, setExpanded] = useState(false);
+  const meta = PROVIDER_META[trend.provider] ?? PROVIDER_META.aws;
+  const latest = trend.dataPoints[trend.dataPoints.length - 1];
+  const cpuData = trend.dataPoints.map(d => d.cpu);
+  const memData = trend.dataPoints.map(d => d.memory);
+  const diskData = trend.dataPoints.map(d => d.disk);
+  const netData = trend.dataPoints.map(d => d.network);
+
+  return (
+    <div className="group rounded-2xl border transition-all duration-300 hover:shadow-lg hover:shadow-black/20"
+      style={{ background: 'var(--bg-surface)', borderColor: expanded ? `${meta.color}30` : 'var(--border)' }}>
+      <div className="flex items-center gap-4 px-5 py-4 cursor-pointer select-none"
+        onClick={() => setExpanded(e => !e)}>
+        <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 transition-all duration-300 group-hover:scale-110"
+          style={{ background: meta.bg, border: '1px solid ' + meta.color + '30' }}>
+          <Gauge size={20} style={{ color: meta.color }} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-bold truncate" style={{ color: 'var(--text-primary)' }}>{trend.resourceName}</p>
+          <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
+            {trend.resourceType.replace(/_/g, ' ')} · {meta.label} · 24h trend
+          </p>
+        </div>
+        <div className="hidden sm:flex items-center gap-3 flex-shrink-0">
+          {latest && (
+            <div className="flex items-center gap-2.5">
+              <span className="text-[9px] px-1.5 py-0.5 rounded-full font-medium" style={{ background: 'rgba(52,211,153,0.1)', color: '#34d399', border: '1px solid rgba(52,211,153,0.2)' }}>CPU {latest.cpu}%</span>
+              <span className="text-[9px] px-1.5 py-0.5 rounded-full font-medium" style={{ background: 'rgba(96,165,250,0.1)', color: '#60a5fa', border: '1px solid rgba(96,165,250,0.2)' }}>MEM {latest.memory}%</span>
+            </div>
+          )}
+        </div>
+        <div className="w-7 h-7 flex items-center justify-center rounded-lg transition-all duration-200 group-hover:bg-white/5">
+          {expanded ? <ChevronUp size={15} style={{ color: 'var(--text-muted)' }} /> : <ChevronDown size={15} style={{ color: 'var(--text-muted)' }} />}
+        </div>
+      </div>
+
+      <div className={`overflow-hidden transition-all duration-300 ${expanded ? 'max-h-[400px] opacity-100' : 'max-h-0 opacity-0'}`}>
+        <div className="px-5 pb-5 pt-1 border-t" style={{ borderColor: 'var(--border-subtle)' }}>
+          <div className="mt-3 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-[9px] font-bold uppercase" style={{ color: 'var(--text-faint)' }}>Last 24 Hours</span>
+              <span className="text-[9px]" style={{ color: 'var(--text-faint)' }}>
+                {new Date(trend.dataPoints[0]?.timestamp ?? '').toLocaleTimeString()} - {new Date(trend.dataPoints[trend.dataPoints.length - 1]?.timestamp ?? '').toLocaleTimeString()}
+              </span>
+            </div>
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full" style={{ background: '#34d399' }} />
+                <span className="text-[10px]" style={{ color: 'var(--text-secondary)' }}>CPU</span>
+                <Sparkline data={cpuData} color="#34d399" />
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full" style={{ background: '#60a5fa' }} />
+                <span className="text-[10px]" style={{ color: 'var(--text-secondary)' }}>Memory</span>
+                <Sparkline data={memData} color="#60a5fa" />
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full" style={{ background: '#fbbf24' }} />
+                <span className="text-[10px]" style={{ color: 'var(--text-secondary)' }}>Disk</span>
+                <Sparkline data={diskData} color="#fbbf24" />
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full" style={{ background: '#a78bfa' }} />
+                <span className="text-[10px]" style={{ color: 'var(--text-secondary)' }}>Network</span>
+                <Sparkline data={netData} color="#a78bfa" />
               </div>
             </div>
-
-            <div className="flex items-start gap-2.5 px-3.5 py-3 rounded-xl"
-              style={{ background: isOver ? 'rgba(239,68,68,0.05)' : 'rgba(52,211,153,0.05)', border: '1px solid ' + (isOver ? 'rgba(239,68,68,0.15)' : 'rgba(52,211,153,0.15)') }}>
-              {isOver ? <Info size={13} className="text-red-400 flex-shrink-0 mt-0.5" /> : <CheckCircle2 size={13} className="text-emerald-400 flex-shrink-0 mt-0.5" />}
-              <div>
-                <p className="text-[10px] font-semibold" style={{ color: isOver ? '#f87171' : '#34d399' }}>
-                  {isOver ? 'Cost Anomaly Detected' : 'Under Budget'}
-                </p>
-                <p className="text-[9px] mt-0.5 leading-relaxed" style={{ color: 'var(--text-muted)' }}>
-                  {isOver
-                    ? `$${anomaly.deviation.toFixed(0)}/mo (${anomaly.deviationPct}%) above the design-time estimate of $${anomaly.estimatedCost.toFixed(0)}`
-                    : `$${Math.abs(anomaly.deviation).toFixed(0)}/mo (${Math.abs(anomaly.deviationPct)}%) below the design-time estimate of $${anomaly.estimatedCost.toFixed(0)}`
-                  }
-                </p>
-              </div>
+            <div className="grid grid-cols-4 gap-2">
+              {[
+                { label: 'CPU Avg', value: Math.round(cpuData.reduce((a, b) => a + b, 0) / cpuData.length), color: '#34d399' },
+                { label: 'Mem Avg', value: Math.round(memData.reduce((a, b) => a + b, 0) / memData.length), color: '#60a5fa' },
+                { label: 'Disk Avg', value: Math.round(diskData.reduce((a, b) => a + b, 0) / diskData.length), color: '#fbbf24' },
+                { label: 'Net Avg', value: Math.round(netData.reduce((a, b) => a + b, 0) / netData.length), color: '#a78bfa' },
+              ].map(s => (
+                <div key={s.label} className="px-3 py-2 rounded-lg text-center" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)' }}>
+                  <p className="text-[8px] font-semibold uppercase" style={{ color: 'var(--text-faint)' }}>{s.label}</p>
+                  <p className="text-sm font-bold mt-0.5" style={{ color: s.color }}>{s.value}%</p>
+                </div>
+              ))}
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function IncidentCard({ incident, onAcknowledge }: { incident: Incident; onAcknowledge?: (id: string) => void }) {
+  const [expanded, setExpanded] = useState(false);
+  const meta = PROVIDER_META[incident.provider] ?? PROVIDER_META.aws;
+  const sevColor = incident.severity === 'critical' ? '#ef4444' : incident.severity === 'high' ? '#f97316' : incident.severity === 'medium' ? '#eab308' : '#6b7280';
+  const statusColor = incident.status === 'open' ? '#ef4444' : incident.status === 'acknowledged' ? '#fbbf24' : '#34d399';
+  const statusLabel = incident.status === 'open' ? 'Open' : incident.status === 'acknowledged' ? 'Acknowledged' : 'Resolved';
+
+  return (
+    <div className="group rounded-2xl border transition-all duration-300 hover:shadow-lg hover:shadow-black/20"
+      style={{ background: 'var(--bg-surface)', borderColor: expanded ? `${sevColor}30` : 'var(--border)' }}>
+      <div className="flex items-center gap-4 px-5 py-4 cursor-pointer select-none"
+        onClick={() => setExpanded(e => !e)}>
+        <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 transition-all duration-300 group-hover:scale-110"
+          style={{ background: sevColor + '15', border: '1px solid ' + sevColor + '30' }}>
+          <Bell size={20} style={{ color: sevColor }} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <p className="text-sm font-bold truncate" style={{ color: 'var(--text-primary)' }}>{incident.title}</p>
+            <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full"
+              style={{ background: sevColor + '15', color: sevColor, border: '1px solid ' + sevColor + '25' }}>
+              {incident.severity}
+            </span>
+            <span className="text-[9px] px-1.5 py-0.5 rounded-full"
+              style={{ background: statusColor + '15', color: statusColor, border: '1px solid ' + statusColor + '25' }}>
+              {statusLabel}
+            </span>
+          </div>
+          <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
+            {incident.resourceName} · {meta.label}
+          </p>
+        </div>
+        <div className="flex items-center gap-3 flex-shrink-0">
+          <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)' }}>
+            <Clock size={10} style={{ color: 'var(--text-faint)' }} />
+            <span className="text-[9px] font-medium" style={{ color: 'var(--text-faint)' }}>
+              {Math.floor((Date.now() - new Date(incident.detectedAt).getTime()) / 60000)}m ago
+            </span>
+          </div>
+          <div className="w-7 h-7 flex items-center justify-center rounded-lg transition-all duration-200 group-hover:bg-white/5">
+            {expanded ? <ChevronUp size={15} style={{ color: 'var(--text-muted)' }} /> : <ChevronDown size={15} style={{ color: 'var(--text-muted)' }} />}
+          </div>
+        </div>
+      </div>
+
+      <div className={`overflow-hidden transition-all duration-300 ${expanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
+        <div className="px-5 pb-5 pt-1 border-t" style={{ borderColor: 'var(--border-subtle)' }}>
+          <div className="mt-3 space-y-2.5">
+            <div className="px-3.5 py-3 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)' }}>
+              <p className="text-[9px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-faint)' }}>Description</p>
+              <p className="text-[11px] mt-1 leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{incident.description}</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <div className="flex items-center gap-1.5 text-[9px] px-2.5 py-1.5 rounded-lg" style={{ background: 'rgba(99,102,241,0.08)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.2)' }}>
+                <Calendar size={10} />
+                Detected: {new Date(incident.detectedAt).toLocaleString()}
+              </div>
+              {incident.resolvedAt && (
+                <div className="flex items-center gap-1.5 text-[9px] px-2.5 py-1.5 rounded-lg" style={{ background: 'rgba(52,211,153,0.08)', color: '#34d399', border: '1px solid rgba(52,211,153,0.2)' }}>
+                  <CheckCircle2 size={10} />
+                  Resolved: {new Date(incident.resolvedAt).toLocaleString()}
+                </div>
+              )}
+              {incident.duration && (
+                <div className="flex items-center gap-1.5 text-[9px] px-2.5 py-1.5 rounded-lg" style={{ background: 'rgba(251,191,36,0.08)', color: '#fbbf24', border: '1px solid rgba(251,191,36,0.2)' }}>
+                  <Timer size={10} />
+                  Duration: {Math.round(incident.duration / 60000)}m
+                </div>
+              )}
+              {incident.acknowledgedBy && (
+                <div className="flex items-center gap-1.5 text-[9px] px-2.5 py-1.5 rounded-lg" style={{ background: 'rgba(96,165,250,0.08)', color: '#60a5fa', border: '1px solid rgba(96,165,250,0.2)' }}>
+                  <UserCheck size={10} />
+                  {incident.acknowledgedBy}
+                </div>
+              )}
+            </div>
+            {incident.status === 'open' && onAcknowledge && (
+              <button onClick={(e) => { e.stopPropagation(); onAcknowledge(incident.id); }}
+                className="flex items-center gap-1.5 text-[10px] font-semibold px-3 py-1.5 rounded-lg transition-all hover:scale-[1.02] active:scale-[0.98]"
+                style={{ background: 'rgba(251,191,36,0.12)', color: '#fbbf24', border: '1px solid rgba(251,191,36,0.25)' }}>
+                <UserCheck size={11} />
+                Acknowledge Incident
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TicketCard({
+  ticket,
+  teamMembers,
+  onAssign,
+  onStatusChange,
+  onUnassign,
+}: {
+  ticket: Ticket;
+  teamMembers: TeamMember[];
+  onAssign: (ticketId: string, member: TeamMember) => void;
+  onStatusChange: (ticketId: string, status: Ticket['status'], resolution?: string) => void;
+  onUnassign: (ticketId: string) => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const [showAssignDropdown, setShowAssignDropdown] = useState(false);
+  const [resolution, setResolution] = useState('');
+  const sevColor = ticket.severity === 'critical' ? '#ef4444' : ticket.severity === 'high' ? '#f97316' : ticket.severity === 'medium' ? '#eab308' : '#6b7280';
+  const statusColor = ticket.status === 'open' ? '#ef4444' : ticket.status === 'in_progress' ? '#fbbf24' : ticket.status === 'resolved' ? '#34d399' : '#6b7280';
+  const statusLabel = ticket.status === 'open' ? 'Open' : ticket.status === 'in_progress' ? 'In Progress' : ticket.status === 'resolved' ? 'Resolved' : 'Closed';
+  const actionable = ticket.status === 'open' || ticket.status === 'in_progress';
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setShowAssignDropdown(false);
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  return (
+    <div className="group rounded-2xl border transition-all duration-300 hover:shadow-lg hover:shadow-black/20"
+      style={{ background: 'var(--bg-surface)', borderColor: expanded ? `${sevColor}30` : 'var(--border)' }}>
+      <div className="flex items-center gap-4 px-5 py-4 cursor-pointer select-none"
+        onClick={() => setExpanded(e => !e)}>
+        <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 transition-all duration-300 group-hover:scale-110"
+          style={{ background: sevColor + '15', border: '1px solid ' + sevColor + '30' }}>
+          <Bell size={20} style={{ color: sevColor }} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <p className="text-sm font-bold truncate" style={{ color: 'var(--text-primary)' }}>{ticket.title}</p>
+            <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full"
+              style={{ background: sevColor + '15', color: sevColor, border: '1px solid ' + sevColor + '25' }}>
+              {ticket.severity}
+            </span>
+            <span className="text-[9px] px-1.5 py-0.5 rounded-full"
+              style={{ background: statusColor + '15', color: statusColor, border: '1px solid ' + statusColor + '25' }}>
+              {statusLabel}
+            </span>
+          </div>
+          <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
+            {ticket.resourceName} · {ticket.resourceType} · {ticket.source}
+          </p>
+        </div>
+        <div className="flex items-center gap-3 flex-shrink-0">
+          {ticket.assignee ? (
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg" style={{ background: ticket.assignee.color + '12', border: '1px solid ' + ticket.assignee.color + '20' }}>
+              <div className="w-5 h-5 rounded-md flex items-center justify-center text-[8px] font-bold"
+                style={{ background: ticket.assignee.color, color: '#0a0a0f' }}>
+                {ticket.assignee.initials}
+              </div>
+              <span className="text-[9px] font-medium" style={{ color: ticket.assignee.color }}>{ticket.assignee.name.split(' ')[0]}</span>
+            </div>
+          ) : (
+            <span className="text-[9px] px-2 py-1 rounded-lg" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)', color: 'var(--text-faint)' }}>
+              Unassigned
+            </span>
+          )}
+          <div className="w-7 h-7 flex items-center justify-center rounded-lg transition-all duration-200 group-hover:bg-white/5">
+            {expanded ? <ChevronUp size={15} style={{ color: 'var(--text-muted)' }} /> : <ChevronDown size={15} style={{ color: 'var(--text-muted)' }} />}
+          </div>
+        </div>
+      </div>
+
+      <div className={`transition-all duration-300 overflow-visible ${expanded ? 'max-h-[32rem] opacity-100' : 'max-h-0 opacity-0'}`}>
+        <div className="px-5 pb-5 pt-1 border-t" style={{ borderColor: 'var(--border-subtle)' }}>
+          <div className="mt-3 space-y-2.5">
+            <div className="px-3.5 py-3 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)' }}>
+              <p className="text-[9px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-faint)' }}>Description</p>
+              <p className="text-[11px] mt-1 leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{ticket.description}</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <div className="flex items-center gap-1.5 text-[9px] px-2.5 py-1.5 rounded-lg" style={{ background: 'rgba(99,102,241,0.08)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.2)' }}>
+                <Calendar size={10} />
+                Created: {new Date(ticket.createdAt).toLocaleString()}
+              </div>
+              {ticket.assignedAt && (
+                <div className="flex items-center gap-1.5 text-[9px] px-2.5 py-1.5 rounded-lg" style={{ background: 'rgba(251,191,36,0.08)', color: '#fbbf24', border: '1px solid rgba(251,191,36,0.2)' }}>
+                  <UserCheck size={10} />
+                  Assigned: {new Date(ticket.assignedAt).toLocaleString()}
+                </div>
+              )}
+              {ticket.resolvedAt && (
+                <div className="flex items-center gap-1.5 text-[9px] px-2.5 py-1.5 rounded-lg" style={{ background: 'rgba(52,211,153,0.08)', color: '#34d399', border: '1px solid rgba(52,211,153,0.2)' }}>
+                  <CheckCircle2 size={10} />
+                  Resolved: {new Date(ticket.resolvedAt).toLocaleString()}
+                </div>
+              )}
+              {ticket.resolution && (
+                <div className="flex items-center gap-1.5 text-[9px] px-2.5 py-1.5 rounded-lg" style={{ background: 'rgba(52,211,153,0.08)', color: '#34d399', border: '1px solid rgba(52,211,153,0.2)' }}>
+                  <CheckCircle2 size={10} />
+                  Resolution: {ticket.resolution}
+                </div>
+              )}
+            </div>
+            {actionable && (
+              <div className="flex items-center gap-2 flex-wrap" ref={ref}>
+                {/* Assign / Change Assignment */}
+                <div className="relative">
+                  <button onClick={(e) => { e.stopPropagation(); setShowAssignDropdown(d => !d); }}
+                    className="flex items-center gap-1.5 text-[10px] font-semibold px-3 py-1.5 rounded-lg transition-all hover:scale-[1.02] active:scale-[0.98]"
+                    style={{ background: ticket.assignee ? 'rgba(99,102,241,0.08)' : 'rgba(99,102,241,0.12)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.25)' }}>
+                    <UserPlus size={11} />
+                    {ticket.assignee ? 'Reassign' : 'Assign'}
+                  </button>
+                  {showAssignDropdown && (
+                    <div className="absolute top-full left-0 mt-1 w-52 rounded-xl overflow-hidden z-50"
+                      style={{ background: '#1a1a2e', border: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 12px 48px rgba(0,0,0,0.5)' }}>
+                      {teamMembers.map(m => (
+                        <button key={m.id} onClick={(e) => { e.stopPropagation(); onAssign(ticket.id, m); setShowAssignDropdown(false); }}
+                          className="flex items-center gap-2.5 w-full px-3.5 py-2.5 text-left transition-all hover:bg-white/[0.04]">
+                          <div className="w-6 h-6 rounded-md flex items-center justify-center text-[9px] font-bold flex-shrink-0"
+                            style={{ background: m.color, color: '#0a0a0f' }}>{m.initials}</div>
+                          <div className="min-w-0">
+                            <p className="text-[11px] font-semibold" style={{ color: 'var(--text-primary)' }}>{m.name}</p>
+                            <p className="text-[9px]" style={{ color: 'var(--text-faint)' }}>{m.role}</p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                {ticket.assignee && (
+                  <button onClick={(e) => { e.stopPropagation(); onUnassign(ticket.id); }}
+                    className="flex items-center gap-1.5 text-[10px] font-semibold px-3 py-1.5 rounded-lg transition-all hover:scale-[1.02] active:scale-[0.98]"
+                    style={{ background: 'rgba(239,68,68,0.08)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.2)' }}>
+                    <XCircle size={11} />
+                    Unassign
+                  </button>
+                )}
+                {ticket.assignee && ticket.status !== 'resolved' && (
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      value={resolution}
+                      onChange={(e) => setResolution(e.target.value)}
+                      placeholder="Resolution notes..."
+                      onClick={(e) => e.stopPropagation()}
+                      className="w-40 text-[10px] px-2.5 py-1.5 rounded-lg outline-none"
+                      style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)', color: 'var(--text-primary)' }}
+                    />
+                    <button onClick={(e) => { e.stopPropagation(); onStatusChange(ticket.id, 'resolved', resolution || undefined); }}
+                      className="flex items-center gap-1.5 text-[10px] font-semibold px-3 py-1.5 rounded-lg transition-all hover:scale-[1.02] active:scale-[0.98]"
+                      style={{ background: 'rgba(52,211,153,0.12)', color: '#34d399', border: '1px solid rgba(52,211,153,0.25)' }}>
+                      <CheckCircle2 size={11} />
+                      Resolve
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AlertRulesModal({ rules, onSave, onClose }: { rules: AlertRule[]; onSave: (rules: AlertRule[]) => void; onClose: () => void }) {
+  const [localRules, setLocalRules] = useState<AlertRule[]>(rules);
+
+  const toggleRule = (id: string) => {
+    setLocalRules(prev => prev.map(r => r.id === id ? { ...r, enabled: !r.enabled } : r));
+  };
+
+  const updateThreshold = (id: string, threshold: number) => {
+    setLocalRules(prev => prev.map(r => r.id === id ? { ...r, threshold } : r));
+  };
+
+  const updateSeverity = (id: string, severity: AlertRule['severity']) => {
+    setLocalRules(prev => prev.map(r => r.id === id ? { ...r, severity } : r));
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}>
+      <div className="w-full max-w-lg mx-4 rounded-2xl border shadow-2xl overflow-hidden"
+        style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}>
+        <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: 'var(--border)' }}>
+          <div className="flex items-center gap-2.5">
+            <Settings size={16} style={{ color: 'var(--text-primary)' }} />
+            <h2 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Alert Rules Configuration</h2>
+          </div>
+          <button onClick={onClose} className="text-xs px-2 py-1 rounded-lg transition-all hover:bg-white/5"
+            style={{ color: 'var(--text-muted)' }}>
+            <XCircle size={16} />
+          </button>
+        </div>
+        <div className="px-6 py-4 max-h-96 overflow-y-auto space-y-3">
+          {localRules.map(rule => (
+            <div key={rule.id} className="flex items-center gap-3 p-3 rounded-xl transition-all"
+              style={{ background: rule.enabled ? 'rgba(255,255,255,0.03)' : 'transparent', border: '1px solid var(--border-subtle)', opacity: rule.enabled ? 1 : 0.5 }}>
+              <button onClick={() => toggleRule(rule.id)}
+                className="w-5 h-5 rounded flex items-center justify-center transition-all flex-shrink-0"
+                style={{ background: rule.enabled ? '#34d399' : 'rgba(255,255,255,0.1)' }}>
+                {rule.enabled && <CheckCircle2 size={12} className="text-black" />}
+              </button>
+              <div className="flex-1 min-w-0">
+                <p className="text-[11px] font-semibold truncate" style={{ color: 'var(--text-primary)' }}>{rule.label}</p>
+                <p className="text-[9px] mt-0.5" style={{ color: 'var(--text-faint)' }}>
+                  {rule.metric.toUpperCase()} {rule.condition === 'gt' ? '>' : rule.condition === 'lt' ? '<' : rule.condition === 'gte' ? '≥' : '≤'} {rule.threshold}% for {rule.duration}s
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <select value={rule.threshold} onChange={e => updateThreshold(rule.id, Number(e.target.value))}
+                  className="text-[9px] px-1.5 py-1 rounded-lg font-medium"
+                  style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-secondary)', border: '1px solid var(--border-subtle)' }}>
+                  {[50, 55, 60, 65, 70, 75, 80, 85, 90, 95].map(v => (
+                    <option key={v} value={v}>{v}%</option>
+                  ))}
+                </select>
+                <select value={rule.severity} onChange={e => updateSeverity(rule.id, e.target.value as AlertRule['severity'])}
+                  className="text-[9px] px-1.5 py-1 rounded-lg font-medium"
+                  style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-secondary)', border: '1px solid var(--border-subtle)' }}>
+                  {(['low', 'medium', 'high', 'critical'] as const).map(s => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="flex items-center justify-end gap-2 px-6 py-4 border-t" style={{ borderColor: 'var(--border)' }}>
+          <button onClick={onClose}
+            className="text-[10px] font-semibold px-4 py-2 rounded-lg transition-all"
+            style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-muted)', border: '1px solid var(--border-subtle)' }}>
+            Cancel
+          </button>
+          <button onClick={() => { onSave(localRules); onClose(); }}
+            className="text-[10px] font-semibold px-4 py-2 rounded-lg transition-all hover:scale-[1.02]"
+            style={{ background: 'var(--accent-bg)', color: 'var(--accent-light)', border: '1px solid var(--accent-border)' }}>
+            Save Rules
+          </button>
         </div>
       </div>
     </div>
@@ -347,33 +763,107 @@ export default function MonitoringDashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [healthMetrics, setHealthMetrics] = useState<HealthMetric[]>([]);
   const [driftAlerts, setDriftAlerts] = useState<DriftAlert[]>([]);
-  const [costAnomalies, setCostAnomalies] = useState<CostAnomaly[]>([]);
+  const [complianceChecks, setComplianceChecks] = useState<ComplianceCheck[]>([]);
+  const [resourceTrends, setResourceTrends] = useState<ResourceTrend[]>([]);
+  const [incidents, setIncidents] = useState<Incident[]>([]);
+  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [autoRefresh, setAutoRefresh] = useState(false);
+  const [autoRefreshInterval, setAutoRefreshInterval] = useState(30);
+  const [showAlertRules, setShowAlertRules] = useState(false);
+  const [alertRules, setAlertRules] = useState<AlertRule[]>(DEFAULT_ALERT_RULES);
+  const autoRefreshRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const refresh = useCallback(() => {
     setRefreshing(true);
     setTimeout(() => {
       setHealthMetrics(generateHealthMetrics());
       setDriftAlerts(generateDriftAlerts());
-      setCostAnomalies(generateCostAnomalies());
+      setComplianceChecks(generateComplianceChecks());
+      setResourceTrends(generateResourceTrends());
+      setIncidents(generateIncidents());
+      setTickets(generateTickets());
       setRefreshing(false);
-    }, 600);
+    }, 400);
   }, []);
 
   useEffect(() => { refresh(); }, []);
 
+  useEffect(() => {
+    if (autoRefresh) {
+      autoRefreshRef.current = setInterval(refresh, autoRefreshInterval * 1000);
+    } else {
+      if (autoRefreshRef.current) clearInterval(autoRefreshRef.current);
+    }
+    return () => { if (autoRefreshRef.current) clearInterval(autoRefreshRef.current); };
+  }, [autoRefresh, autoRefreshInterval, refresh]);
+
   const summary = useMemo(
-    () => generateMonitoringSummary(healthMetrics, driftAlerts, costAnomalies),
-    [healthMetrics, driftAlerts, costAnomalies],
+    () => generateMonitoringSummary(healthMetrics, driftAlerts),
+    [healthMetrics, driftAlerts],
   );
 
-  const totalCostAnomalyOverpay = costAnomalies
-    .filter(a => a.deviation > 0)
-    .reduce((s, a) => s + a.deviation, 0);
+  const complianceSummary = useMemo(
+    () => generateComplianceSummary(complianceChecks),
+    [complianceChecks],
+  );
+
+  const incidentSummary = useMemo(
+    () => generateIncidentSummary(incidents),
+    [incidents],
+  );
+
+  const ticketSummary = useMemo(
+    () => generateTicketSummary(tickets),
+    [tickets],
+  );
+
+  const activeAlerts = useMemo(
+    () => healthMetrics.flatMap(m => evaluateAlertRules(m, alertRules)),
+    [healthMetrics, alertRules],
+  );
+
+  const handleAcknowledgeIncident = useCallback((id: string) => {
+    setIncidents(prev => prev.map(i =>
+      i.id === id && i.status === 'open'
+        ? { ...i, status: 'acknowledged' as const, acknowledgedAt: new Date().toISOString(), acknowledgedBy: 'ops@infrastudio.io' }
+        : i
+    ));
+  }, []);
+
+  const handleAssignTicket = useCallback((ticketId: string, member: TeamMember) => {
+    setTickets(prev => prev.map(t =>
+      t.id === ticketId
+        ? { ...t, assignee: member, assignedAt: new Date().toISOString(), status: 'in_progress' as const }
+        : t
+    ));
+  }, []);
+
+  const handleTicketStatusChange = useCallback((ticketId: string, status: Ticket['status'], resolution?: string) => {
+    setTickets(prev => prev.map(t =>
+      t.id === ticketId
+        ? {
+            ...t, status,
+            ...(status === 'resolved' ? { resolvedAt: new Date().toISOString(), resolution } : {}),
+          }
+        : t
+    ));
+  }, []);
+
+  const handleUnassignTicket = useCallback((ticketId: string) => {
+    setTickets(prev => prev.map(t =>
+      t.id === ticketId
+        ? { ...t, assignee: undefined, assignedAt: undefined, status: 'open' as const }
+        : t
+    ));
+  }, []);
 
   const tabs: Array<{ id: Tab; icon: React.ReactNode; label: string; count: number; color: string }> = [
     { id: 'health', icon: <Activity size={13} />, label: 'Health Metrics', count: healthMetrics.length, color: '#34d399' },
-    { id: 'drift',  icon: <AlertTriangle size={13} />, label: 'Drift Alerts',  count: driftAlerts.length, color: '#fbbf24' },
-    { id: 'cost',   icon: <DollarSign size={13} />, label: 'Cost Anomalies', count: costAnomalies.length, color: '#f97316' },
+    { id: 'drift', icon: <AlertTriangle size={13} />, label: 'Drift Alerts', count: driftAlerts.length, color: '#fbbf24' },
+    { id: 'compliance', icon: <FileCheck size={13} />, label: 'Compliance', count: complianceChecks.filter(c => c.status === 'fail').length, color: '#818cf8' },
+    { id: 'trends', icon: <Gauge size={13} />, label: 'Trends', count: resourceTrends.length, color: '#60a5fa' },
+    { id: 'incidents', icon: <Bell size={13} />, label: 'Incidents', count: incidents.filter(i => i.status !== 'resolved').length, color: '#f97316' },
+    { id: 'tickets', icon: <UserPlus size={13} />, label: 'Tickets', count: tickets.filter(t => t.status !== 'resolved' && t.status !== 'closed').length, color: '#a78bfa' },
   ];
 
   return (
@@ -406,15 +896,49 @@ export default function MonitoringDashboard() {
                 Infrastructure <span className="gradient-text">Monitoring</span>
               </h1>
               <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
-                Health · Drift Detection · Cost Anomaly Tracking
+                Real-time Health & Drift Detection · Compliance · Incidents
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            {/* Auto-refresh toggle */}
+            <div className="flex items-center gap-1 px-2 py-1.5 rounded-lg"
+              style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}>
+              <button onClick={() => setAutoRefresh(!autoRefresh)}
+                className="flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-md transition-all"
+                style={{ color: autoRefresh ? '#34d399' : 'var(--text-muted)' }}>
+                {autoRefresh ? <Pause size={11} /> : <Play size={11} />}
+                {autoRefresh ? `${autoRefreshInterval}s` : 'Auto'}
+              </button>
+              {autoRefresh && (
+                <select value={autoRefreshInterval} onChange={e => setAutoRefreshInterval(Number(e.target.value))}
+                  className="text-[9px] font-medium bg-transparent rounded px-1 py-0.5"
+                  style={{ color: 'var(--text-muted)', border: '1px solid var(--border-subtle)' }}>
+                  <option value={15}>15s</option>
+                  <option value={30}>30s</option>
+                  <option value={60}>60s</option>
+                </select>
+              )}
+            </div>
+            {/* Alert rules button */}
+            <button onClick={() => setShowAlertRules(true)}
+              className="flex items-center gap-1 text-[10px] font-semibold px-2.5 py-1.5 rounded-lg transition-all hover:scale-[1.02] active:scale-[0.98]"
+              style={{ background: 'rgba(251,191,36,0.08)', color: '#fbbf24', border: '1px solid rgba(251,191,36,0.2)' }}>
+              <Settings size={11} />
+              Rules
+            </button>
+            {activeAlerts.length > 0 && !showAlertRules && (
+              <div className="flex items-center gap-1 text-[9px] font-semibold px-2 py-1 rounded-lg"
+                style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.2)' }}>
+                <Bell size={10} />
+                {activeAlerts.length} active
+              </div>
+            )}
             <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-medium"
               style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}>
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" style={{ animation: 'pulse-soft 2s ease-in-out infinite' }} />
-              {refreshing ? 'Collecting...' : 'Live'}
+              <span className={`w-1.5 h-1.5 rounded-full ${autoRefresh ? 'bg-emerald-500' : 'bg-gray-500'}`}
+                style={{ animation: autoRefresh ? 'pulse-soft 2s ease-in-out infinite' : 'none' }} />
+              {refreshing ? 'Collecting...' : autoRefresh ? 'Auto' : 'Static'}
             </div>
             <button onClick={refresh} disabled={refreshing}
               className="flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 rounded-lg transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
@@ -427,7 +951,7 @@ export default function MonitoringDashboard() {
       </div>
 
       {/* Summary bar */}
-      {healthMetrics.length > 0 && (
+      {(healthMetrics.length > 0 || complianceChecks.length > 0) && (
         <div className="relative z-10 px-6 py-4 border-b flex-shrink-0" style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <SummaryCard icon={<CheckCircle2 size={14} />} label="Healthy" color="#34d399"
@@ -436,12 +960,13 @@ export default function MonitoringDashboard() {
             <SummaryCard icon={<AlertTriangle size={14} />} label="Warning" color="#fbbf24"
               bg="rgba(251,191,36,0.1)"
               value={summary.warningResources} subtitle="resources degraded" />
-            <SummaryCard icon={<XCircle size={14} />} label="Critical" color="#ef4444"
-              bg="rgba(239,68,68,0.1)"
-              value={summary.criticalResources + summary.driftCount} subtitle="require attention" />
-            <SummaryCard icon={<DollarSign size={14} />} label="Potential Savings" color="#f97316"
-              bg="rgba(249,115,22,0.1)"
-              value={`$${summary.potentialSavings.toFixed(0)}`} subtitle="/month recoverable" />
+            <SummaryCard icon={<FileCheck size={14} />} label="Compliance Score" color="#818cf8"
+              bg="rgba(99,102,241,0.1)"
+              value={`${complianceSummary.score}%`} subtitle={`${complianceSummary.failed} failed checks`} />
+            <SummaryCard icon={<Bell size={14} />} label={incidentSummary.open > 0 ? 'Open Incidents' : 'MTTR'} color={incidentSummary.open > 0 ? '#ef4444' : '#34d399'}
+              bg={incidentSummary.open > 0 ? 'rgba(239,68,68,0.1)' : 'rgba(52,211,153,0.1)'}
+              value={incidentSummary.open > 0 ? incidentSummary.open : `${incidentSummary.mttr}m`}
+              subtitle={incidentSummary.open > 0 ? 'require acknowledgement' : 'mean time to resolve'} />
           </div>
         </div>
       )}
@@ -465,13 +990,6 @@ export default function MonitoringDashboard() {
             </button>
           );
         })}
-        <div className="flex-1" />
-        {tab === 'cost' && totalCostAnomalyOverpay > 0 && (
-          <div className="flex items-center gap-1.5 text-[9px] font-semibold px-2.5 py-1 rounded-lg" style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.2)' }}>
-            <TrendingUp size={10} />
-            ${totalCostAnomalyOverpay.toFixed(0)} over budget
-          </div>
-        )}
       </div>
 
       {/* Content */}
@@ -519,6 +1037,15 @@ export default function MonitoringDashboard() {
                     })}
                   </div>
                 </div>
+                {activeAlerts.length > 0 && (
+                  <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl mb-2"
+                    style={{ background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.15)' }}>
+                    <Bell size={12} className="text-red-400 flex-shrink-0" />
+                    <p className="text-[10px]" style={{ color: 'var(--text-secondary)' }}>
+                      <span className="font-bold text-red-400">{activeAlerts.length} alert rule{activeAlerts.length !== 1 ? 's' : ''}</span> firing — consider reviewing thresholds
+                    </p>
+                  </div>
+                )}
                 {healthMetrics.map(m => <HealthCard key={m.resourceId} metric={m} />)}
               </>
             )}
@@ -547,32 +1074,180 @@ export default function MonitoringDashboard() {
               </>
             )}
           </div>
-        ) : (
+        ) : tab === 'compliance' ? (
           <div className="p-5 space-y-3">
-            {costAnomalies.length === 0 ? (
+            {complianceChecks.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20">
+                <div className="w-20 h-20 rounded-3xl flex items-center justify-center text-4xl mx-auto mb-5"
+                  style={{ background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.15)' }}>
+                  <FileCheck size={36} style={{ color: '#818cf8', opacity: 0.5 }} />
+                </div>
+                <h3 className="text-base font-bold mb-1" style={{ color: 'var(--text-primary)' }}>No compliance data</h3>
+                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Connect cloud accounts to run compliance scans</p>
+              </div>
+            ) : (
+              <>
+                {/* Compliance score ring */}
+                <div className="flex items-center gap-6 px-5 py-4 rounded-2xl mb-3" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}>
+                  <div className="relative w-16 h-16 flex-shrink-0">
+                    <svg className="w-16 h-16 -rotate-90" viewBox="0 0 64 64">
+                      <circle cx="32" cy="32" r="28" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="5" />
+                      <circle cx="32" cy="32" r="28" fill="none" stroke="#818cf8" strokeWidth="5"
+                        strokeDasharray={`${(complianceSummary.score / 100) * 176} 176`}
+                        strokeLinecap="round" />
+                    </svg>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className="text-sm font-extrabold" style={{ color: '#818cf8' }}>{complianceSummary.score}%</span>
+                    </div>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Compliance Posture</p>
+                    <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                      {complianceSummary.passed} passed · {complianceSummary.failed} failed · {complianceSummary.na} N/A across {complianceSummary.totalChecks} checks
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="flex items-center gap-1 text-[9px] px-2 py-1 rounded-full font-medium"
+                      style={{ background: 'rgba(52,211,153,0.1)', color: '#34d399', border: '1px solid rgba(52,211,153,0.2)' }}>
+                      <CheckCircle2 size={9} /> {complianceSummary.passed}
+                    </span>
+                    <span className="flex items-center gap-1 text-[9px] px-2 py-1 rounded-full font-medium"
+                      style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.2)' }}>
+                      <XCircle size={9} /> {complianceSummary.failed}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Standards grouping */}
+                {Array.from(new Set(complianceChecks.map(c => c.standard))).map(standard => {
+                  const checks = complianceChecks.filter(c => c.standard === standard);
+                  const passed = checks.filter(c => c.status === 'pass').length;
+                  const failed = checks.filter(c => c.status === 'fail').length;
+                  return (
+                    <div key={standard} className="rounded-2xl border overflow-hidden" style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}>
+                      <div className="flex items-center justify-between px-5 py-3" style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--border-subtle)' }}>
+                        <div className="flex items-center gap-2">
+                          <Shield size={12} style={{ color: failed > 0 ? '#ef4444' : '#34d399' }} />
+                          <span className="text-xs font-bold" style={{ color: 'var(--text-primary)' }}>{standard}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[9px] px-1.5 py-0.5 rounded-full font-medium"
+                            style={{ background: 'rgba(52,211,153,0.1)', color: '#34d399' }}>{passed} pass</span>
+                          {failed > 0 && (
+                            <span className="text-[9px] px-1.5 py-0.5 rounded-full font-medium"
+                              style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}>{failed} fail</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                <div className="flex items-center justify-between mt-4 mb-1">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-faint)' }}>
+                    {complianceChecks.length} checks
+                  </p>
+                </div>
+                {complianceChecks.map(c => <ComplianceCard key={c.id} check={c} />)}
+              </>
+            )}
+          </div>
+        ) : tab === 'trends' ? (
+          <div className="p-5 space-y-3">
+            {resourceTrends.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20">
+                <div className="w-20 h-20 rounded-3xl flex items-center justify-center text-4xl mx-auto mb-5"
+                  style={{ background: 'rgba(96,165,250,0.06)', border: '1px solid rgba(96,165,250,0.15)' }}>
+                  <Gauge size={36} style={{ color: '#60a5fa', opacity: 0.5 }} />
+                </div>
+                <h3 className="text-base font-bold mb-1" style={{ color: 'var(--text-primary)' }}>No trend data available</h3>
+                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Resource utilization history appears once monitoring is active</p>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-faint)' }}>
+                    {resourceTrends.length} resources · 24h rolling window
+                  </p>
+                  <span className="text-[9px] flex items-center gap-1" style={{ color: 'var(--text-faint)' }}>
+                    <History size={10} /> 24 data points each
+                  </span>
+                </div>
+                {resourceTrends.map(t => <TrendCard key={t.resourceId} trend={t} />)}
+              </>
+            )}
+          </div>
+        ) : tab === 'incidents' ? (
+          <div className="p-5 space-y-3">
+            {incidents.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20">
                 <div className="w-20 h-20 rounded-3xl flex items-center justify-center text-4xl mx-auto mb-5"
                   style={{ background: 'rgba(249,115,22,0.06)', border: '1px solid rgba(249,115,22,0.15)' }}>
-                  <BarChart3 size={36} style={{ color: '#f97316', opacity: 0.5 }} />
+                  <Bell size={36} style={{ color: '#f97316', opacity: 0.5 }} />
                 </div>
-                <h3 className="text-base font-bold mb-1" style={{ color: 'var(--text-primary)' }}>No cost anomalies</h3>
-                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Actual spend aligns with design-time estimates</p>
+                <h3 className="text-base font-bold mb-1" style={{ color: 'var(--text-primary)' }}>No incidents recorded</h3>
+                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>All clear — no issues detected in the monitoring window</p>
               </div>
             ) : (
               <>
                 <div className="flex items-center gap-3 px-4 py-3 rounded-xl mb-2"
-                  style={{ background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.15)' }}>
-                  <DollarSign size={14} className="text-red-400 flex-shrink-0" />
+                  style={{ background: incidentSummary.open > 0 ? 'rgba(239,68,68,0.06)' : 'rgba(52,211,153,0.06)', border: '1px solid ' + (incidentSummary.open > 0 ? 'rgba(239,68,68,0.15)' : 'rgba(52,211,153,0.15)') }}>
+                  {incidentSummary.open > 0 ? <AlertTriangle size={14} className="text-red-400 flex-shrink-0" /> : <CheckCircle2 size={14} className="text-emerald-400 flex-shrink-0" />}
                   <p className="text-[10px] leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
-                    <span className="font-bold text-red-400">${totalCostAnomalyOverpay.toFixed(0)}/mo</span> in detected over-spend across {costAnomalies.filter(a => a.deviation > 0).length} service{costAnomalies.filter(a => a.deviation > 0).length !== 1 ? 's' : ''}. Real costs deviate from design-time estimates.
+                    {incidentSummary.open > 0
+                      ? <><span className="font-bold text-red-400">{incidentSummary.open} open</span> · {incidentSummary.acknowledged} acknowledged · {incidentSummary.resolved} resolved · MTTR <span className="font-bold text-emerald-400">{incidentSummary.mttr}m</span></>
+                      : <><span className="font-bold text-emerald-400">All {incidentSummary.total} incidents resolved</span> · MTTR {incidentSummary.mttr}m</>
+                    }
                   </p>
                 </div>
-                {costAnomalies.map(a => <CostCard key={a.id} anomaly={a} />)}
+                {incidents.map(i => <IncidentCard key={i.id} incident={i} onAcknowledge={handleAcknowledgeIncident} />)}
+              </>
+            )}
+          </div>
+        ) : (
+          <div className="p-5 space-y-3">
+            {tickets.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20">
+                <div className="w-20 h-20 rounded-3xl flex items-center justify-center text-4xl mx-auto mb-5"
+                  style={{ background: 'rgba(167,139,250,0.06)', border: '1px solid rgba(167,139,250,0.15)' }}>
+                  <UserPlus size={36} style={{ color: '#a78bfa', opacity: 0.5 }} />
+                </div>
+                <h3 className="text-base font-bold mb-1" style={{ color: 'var(--text-primary)' }}>No tickets yet</h3>
+                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Tickets are automatically created from critical incidents and compliance failures</p>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center gap-3 px-4 py-3 rounded-xl mb-2"
+                  style={{ background: 'rgba(167,139,250,0.06)', border: '1px solid rgba(167,139,250,0.15)' }}>
+                  <UserPlus size={14} className="text-purple-400 flex-shrink-0" />
+                  <p className="text-[10px] leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+                    <span className="font-bold text-purple-400">{ticketSummary.total} tickets</span> · {ticketSummary.open} open · {ticketSummary.inProgress} in progress · {ticketSummary.resolved} resolved · <span className="font-bold text-purple-400">{ticketSummary.critical} critical</span> · {ticketSummary.unassigned} unassigned
+                  </p>
+                </div>
+                {tickets.map(t => (
+                  <TicketCard
+                    key={t.id}
+                    ticket={t}
+                    teamMembers={TEAM_MEMBERS}
+                    onAssign={handleAssignTicket}
+                    onStatusChange={handleTicketStatusChange}
+                    onUnassign={handleUnassignTicket}
+                  />
+                ))}
               </>
             )}
           </div>
         )}
       </div>
+
+      {/* Alert Rules Modal */}
+      {showAlertRules && (
+        <AlertRulesModal
+          rules={alertRules}
+          onSave={(rules) => setAlertRules(rules)}
+          onClose={() => setShowAlertRules(false)}
+        />
+      )}
     </div>
   );
 }

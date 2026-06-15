@@ -14,23 +14,32 @@ const ThemeContext = createContext<ThemeContextValue>({
   isDark: true,
 });
 
-export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setTheme] = useState<Theme>(() => {
+function getInitialTheme(): Theme {
+  try {
     const saved = localStorage.getItem('ivb-theme');
     if (saved === 'light' || saved === 'dark') return saved;
+  } catch {}
+  try {
     return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-  });
+  } catch {
+    return 'dark';
+  }
+}
+
+export function ThemeProvider({ children }: { children: ReactNode }) {
+  const [theme, setTheme] = useState<Theme>(getInitialTheme);
 
   useEffect(() => {
     const root = document.documentElement;
     root.setAttribute('data-theme', theme);
-    // Also set Tailwind dark class for any Tailwind dark: utilities
     if (theme === 'dark') {
       root.classList.add('dark');
     } else {
       root.classList.remove('dark');
     }
-    localStorage.setItem('ivb-theme', theme);
+    try {
+      localStorage.setItem('ivb-theme', theme);
+    } catch {}
   }, [theme]);
 
   const toggleTheme = () => setTheme(t => t === 'dark' ? 'light' : 'dark');

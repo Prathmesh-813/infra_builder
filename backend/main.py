@@ -1,5 +1,5 @@
 """
-Infrastructure Visual Builder — FastAPI backend.
+InfraStudio — FastAPI backend.
 
 Startup (from project root):
     uvicorn backend.main:app --reload --port 8001
@@ -20,7 +20,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 app = FastAPI(
-    title="Infrastructure Visual Builder — Pricing API",
+    title="InfraStudio — Pricing API",
     description="Live cloud pricing — AWS, Azure (public API), GCP (Billing Catalog API)",
     version="1.0.0",
 )
@@ -42,7 +42,7 @@ app.include_router(gcp_router)
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok", "service": "Infrastructure Visual Builder Pricing API"}
+    return {"status": "ok", "service": "InfraStudio Pricing API"}
 
 
 if __name__ == "__main__":
