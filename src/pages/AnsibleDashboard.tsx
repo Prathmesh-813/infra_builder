@@ -1,19 +1,20 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ReactFlowInstance } from 'reactflow';
-import { DollarSign } from 'lucide-react';
+import { DollarSign, Sparkles } from 'lucide-react';
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
 import Canvas from '../components/Canvas';
 import ConfigPanel from '../components/ConfigPanel';
 import CodePanel from '../components/CodePanel';
 import CostPanel from '../components/CostPanel';
+import AIChatPanel from '../components/AIChatPanel';
 import { ResourceDefinition } from '../types/resources';
 import { useStore } from '../store/useStore';
 import { ANSIBLE_DEFINITIONS } from '../data/ansibleDefinitions';
 
 const idCounter = { current: 1 };
 
-type RightPanel = 'code' | 'cost';
+type RightPanel = 'code' | 'cost' | 'ai';
 
 export default function AnsibleDashboard() {
   const { addNode, selectedNodeId } = useStore();
@@ -75,6 +76,7 @@ export default function AnsibleDashboard() {
   const panelTabs: Array<{ id: RightPanel; icon: React.ReactNode; label: string; title: string }> = [
     { id: 'code', icon: <span className="font-mono text-[10px] font-bold">{'{}'}</span>, label: 'Code', title: 'Generated Playbook' },
     { id: 'cost', icon: <DollarSign size={13} />,  label: 'Cost',  title: 'Cost Estimate' },
+    { id: 'ai',   icon: <Sparkles size={13} />,    label: 'AI',    title: 'AI Assistant' },
   ];
 
   return (
@@ -138,6 +140,7 @@ export default function AnsibleDashboard() {
               <div key={rightPanel} className="fade-in h-full">
                 {rightPanel === 'code' && <CodePanel />}
                 {rightPanel === 'cost' && <CostPanel />}
+                {rightPanel === 'ai'   && <AIChatPanel />}
               </div>
             </div>
           </div>

@@ -7,6 +7,7 @@ import AnsibleDashboard from './pages/AnsibleDashboard';
 import CrossplaneDashboard from './pages/CrossplaneDashboard';
 import OptimizationDashboard from './pages/OptimizationDashboard';
 import MonitoringDashboard from './pages/MonitoringDashboard';
+import AnalyticsDashboard from './pages/AnalyticsDashboard';
 import PricingPage from './pages/PricingPage';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
@@ -68,6 +69,7 @@ export default function App() {
           <Route path="/crossplane" element={<CrossplaneDashboard />} />
           <Route path="/optimization" element={<OptimizationDashboard />} />
           <Route path="/monitoring" element={<MonitoringDashboard />} />
+          <Route path="/analytics" element={<AnalyticsDashboard />} />
           <Route path="/pricing" element={<PricingPage />} />
         </Routes>
       </div>

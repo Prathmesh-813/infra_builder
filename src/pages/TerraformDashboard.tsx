@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ReactFlowInstance } from 'reactflow';
-import { DollarSign, Shield, GitCompare, Globe } from 'lucide-react';
+import { DollarSign, Shield, GitCompare, Globe, Sparkles } from 'lucide-react';
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
 import Canvas from '../components/Canvas';
@@ -12,6 +12,7 @@ import CostPanel from '../components/CostPanel';
 import SecurityPanel from '../components/SecurityPanel';
 import DiffPanel from '../components/DiffPanel';
 import DriftPanel from '../components/DriftPanel';
+import AIChatPanel from '../components/AIChatPanel';
 import DiagramScanModal from '../components/DiagramScanModal';
 import ImportModal from '../components/ImportModal';
 import { ResourceDefinition } from '../types/resources';
@@ -28,7 +29,7 @@ const ALL_DEFINITIONS: Record<string, ResourceDefinition[]> = {
   gcp:   GCP_DEFINITIONS as ResourceDefinition[],
 };
 
-type RightPanel = 'code' | 'cost' | 'security' | 'diff' | 'drift';
+type RightPanel = 'code' | 'cost' | 'security' | 'diff' | 'drift' | 'ai';
 
 export default function TerraformDashboard() {
   const { addNode, selectedNodeId, cloudProvider } = useStore();
@@ -106,6 +107,7 @@ export default function TerraformDashboard() {
     { id: 'security', icon: <Shield size={13} />,      label: 'Security', title: 'Security Audit' },
     { id: 'diff',     icon: <GitCompare size={13} />,  label: 'Diff',     title: 'Diff View' },
     { id: 'drift',    icon: <Globe size={13} />,       label: 'Drift',    title: 'Drift Detection' },
+    { id: 'ai',       icon: <Sparkles size={13} />,    label: 'AI',       title: 'AI Assistant' },
   ];
 
   return (
@@ -178,6 +180,7 @@ export default function TerraformDashboard() {
                 {rightPanel === 'security' && <SecurityPanel />}
                 {rightPanel === 'diff'     && <DiffPanel />}
                 {rightPanel === 'drift'    && <DriftPanel />}
+                {rightPanel === 'ai'       && <AIChatPanel />}
               </div>
             </div>
           </div>

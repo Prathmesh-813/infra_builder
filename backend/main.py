@@ -12,6 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.routes.gcp_settings import router as gcp_settings_router
 from backend.routes.pricing import azure_router, gcp_router, router as pricing_router
 from backend.routes.settings import router as settings_router
+from backend.routes.ai import router as ai_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -38,6 +39,7 @@ app.include_router(gcp_settings_router)
 app.include_router(pricing_router)
 app.include_router(azure_router)
 app.include_router(gcp_router)
+app.include_router(ai_router)
 
 
 @app.get("/api/health")

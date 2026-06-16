@@ -1,11 +1,12 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { BarChart3, FileCode2, Settings, Layers3, Cpu, Home, LogOut, TrendingUp, Activity, DollarSign } from 'lucide-react';
+import { BarChart3, FileCode2, Settings, Layers3, Cpu, Home, LogOut, TrendingUp, Activity, DollarSign, PieChart } from 'lucide-react';
 
 const NAV_ITEMS = [
   { to: '/terraform', icon: FileCode2, label: 'Terraform', color: '#818cf8', desc: 'HCL Infrastructure' },
   { to: '/cost-comparison', icon: BarChart3, label: 'Cost Compare', color: '#c084fc', desc: 'Cloud Cost Analysis' },
   { to: '/optimization', icon: TrendingUp, label: 'Compute Optimizer', color: '#f97316', desc: 'Right-size Recommendations' },
   { to: '/monitoring', icon: Activity, label: 'Monitoring', color: '#38bdf8', desc: 'Health, Drift & Cost Alerts' },
+  { to: '/analytics', icon: PieChart, label: 'Analytics', color: '#22c55e', desc: 'Usage & Infrastructure Insights' },
   { to: '/ansible', icon: Settings, label: 'Ansible', color: '#f87171', desc: 'Automation Playbooks' },
   { to: '/crossplane', icon: Layers3, label: 'Crossplane', color: '#38bdf8', desc: 'K8s-native Cloud' },
   { to: '/pricing', icon: DollarSign, label: 'Pricing', color: '#f59e0b', desc: 'Plans & Subscription' },

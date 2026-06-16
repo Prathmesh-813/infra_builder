@@ -53,6 +53,7 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
       'Cost comparison across providers',
       'PDF & Excel export with cost reports',
       'AI-powered compute optimization',
+      'AI infrastructure generation from text',
       'Infrastructure monitoring & drift detection',
       'Priority email support',
     ],

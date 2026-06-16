@@ -15,6 +15,7 @@ const COMPARISON_ROWS = [
   { label: 'Crossplane Compositions', free: true, pro: true, enterprise: true },
   { label: 'Live Cloud Pricing', free: false, pro: true, enterprise: true },
   { label: 'Cost Comparison', free: true, pro: true, enterprise: true },
+  { label: 'AI Infra Generation', free: false, pro: true, enterprise: true },
   { label: 'Compute Optimizer', free: false, pro: true, enterprise: true },
   { label: 'Monitoring & Drift Detection', free: false, pro: true, enterprise: true },
   { label: 'PDF / Excel Export', free: false, pro: true, enterprise: true },
