@@ -411,7 +411,7 @@ export default function CodePanel() {
           options={{
             readOnly: true,
             minimap: { enabled: false },
-            fontSize: 12,
+            fontSize: 14,
             lineNumbers: 'on',
             scrollBeyondLastLine: false,
             wordWrap: 'on',

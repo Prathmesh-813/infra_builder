@@ -692,10 +692,10 @@ export default function CostComparisonPanel() {
   const [showExportMenu, setShowExportMenu] = useState(false);
 
   return (
-    <div ref={containerRef} className="flex flex-col h-full overflow-hidden" style={{ background: 'var(--bg-app)' }}>
+    <div ref={containerRef} style={{ background: 'var(--bg-app)' }}>
 
       {/* ── Live Pricing credentials ────────────────────────────────────────── */}
-      <div className="px-4 pt-3 pb-2 flex-shrink-0 space-y-1.5" style={{ borderBottom: '1px solid var(--border)' }}>
+      <div className="px-4 pt-3 pb-2 space-y-1.5" style={{ borderBottom: '1px solid var(--border)' }}>
         <AzurePricingPanel onAvailabilityChange={handleAzureAvailabilityChange} />
         <AWSCredentialsPanel onCredentialsChange={handleAwsCredentialsChange} />
         <GCPCredentialsPanel onCredentialsChange={handleGcpCredentialsChange} />
@@ -734,7 +734,7 @@ export default function CostComparisonPanel() {
 
       {/* ── Top summary bar ──────────────────────────────────────────────────── */}
       {addedServices.length > 0 && (
-        <div className="px-5 py-4 border-b flex-shrink-0"
+        <div className="px-5 py-4 border-b"
           style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}>
           <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
             <div className="flex items-center gap-2">
@@ -877,13 +877,13 @@ export default function CostComparisonPanel() {
       )}
 
       {/* ── Drop / results area ───────────────────────────────────────────────── */}
-      <div className="flex-1 overflow-y-auto" style={{ padding: addedServices.length > 0 ? '16px' : 0 }}
+      <div style={{ padding: addedServices.length > 0 ? '16px' : 0 }}
         onDrop={handleDrop} onDragOver={handleDragOver}>
 
         {addedServices.length === 0 ? (
           /* Empty state */
-          <div className="flex flex-col items-center justify-center h-full"
-            style={{ minHeight: 400 }}>
+          <div className="flex flex-col items-center justify-center"
+            style={{ minHeight: 'calc(100vh - 200px)' }}>
             <div className="text-center px-8">
               <div className="w-20 h-20 rounded-3xl flex items-center justify-center text-4xl mx-auto mb-5"
                 style={{

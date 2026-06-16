@@ -111,7 +111,7 @@ export default function OptimizationDashboard() {
       </div>
 
       {/* Main content */}
-      <div className="relative z-10 flex-1 overflow-hidden">
+      <div className="relative z-10 flex-1 overflow-y-auto min-h-0">
         <OptimizationPanel />
       </div>
     </div>

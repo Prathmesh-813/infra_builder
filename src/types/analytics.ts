@@ -55,6 +55,22 @@ export interface ComplexityMetric {
   description: string;
 }
 
+export interface CloudServiceRecord {
+  id: string;
+  serviceName: string;
+  serviceType: string;
+  provider: string;
+  providerLabel: string;
+  category: string;
+  region: string;
+  createdBy: string;
+  createdByAvatar: string;
+  createdAt: string;
+  status: 'active' | 'stopped' | 'failed' | 'provisioning';
+  cost: number;
+  tags: string[];
+}
+
 export interface AnalyticsSummary {
   totalResources: number;
   totalCost: number;
@@ -68,4 +84,5 @@ export interface AnalyticsSummary {
   costBreakdown: CostBreakdown[];
   recentActivity: ActivityEvent[];
   complexityMetrics: ComplexityMetric[];
+  cloudServiceRecords: CloudServiceRecord[];
 }

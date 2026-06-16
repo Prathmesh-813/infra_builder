@@ -16,6 +16,7 @@ export interface ResourceMetrics {
 }
 
 export interface Recommendation {
+  uid: string;
   serviceId: string;
   serviceName: string;
   provider: string;
@@ -50,6 +51,7 @@ export function getAllOptimizationServices(): OptimizationService[] {
 }
 
 export function generateRecommendation(
+  uid: string,
   serviceId: string,
   instanceType: string,
   metrics: ResourceMetrics,
@@ -66,6 +68,7 @@ export function generateRecommendation(
   const { metric, value, direction } = findTrigger(service, metrics);
   if (direction === 'none') {
     return {
+      uid,
       serviceId,
       serviceName: service.serviceName,
       provider: service.provider,
@@ -95,7 +98,7 @@ export function generateRecommendation(
   const targetInstance = direction === 'upgrade' ? current.upgrade : current.downgrade;
   if (!targetInstance) {
     return {
-      ...baseResult(service, instanceType, current, family.family, metric, value, direction),
+      ...baseResult(uid, service, instanceType, current, family.family, metric, value, direction),
       action: direction,
       recommendedInstance: instanceType,
       recommendedCost: current.price,
@@ -124,6 +127,7 @@ export function generateRecommendation(
   const reason = service.getRecommendationReason(metric, value, instanceType, targetInstance, direction);
 
   return {
+    uid,
     serviceId,
     serviceName: service.serviceName,
     provider: service.provider,
@@ -151,6 +155,7 @@ export function generateRecommendation(
 }
 
 function baseResult(
+  uid: string,
   service: OptimizationService,
   instanceType: string,
   current: InstanceUpgradePath,
@@ -160,6 +165,7 @@ function baseResult(
   direction: RecommendationAction,
 ): Recommendation {
   return {
+    uid,
     serviceId: service.id,
     serviceName: service.serviceName,
     provider: service.provider,

@@ -486,7 +486,7 @@ export default function OptimizationPanel() {
   }, []);
 
   const recommendations: Recommendation[] = addedResources.map(r =>
-    generateRecommendation(r.serviceId, r.instanceType, r.metrics)
+    generateRecommendation(r.uid, r.serviceId, r.instanceType, r.metrics)
   ).filter((r): r is Recommendation => r !== null);
 
   const totalSavings = useMemo(() =>
@@ -509,9 +509,9 @@ export default function OptimizationPanel() {
   const optimizedCount = recommendations.filter(r => r.action === 'none').length;
 
   return (
-    <div className="flex flex-col h-full overflow-hidden" style={{ background: 'var(--bg-app)' }}>
+    <div style={{ background: 'var(--bg-app)' }}>
       {/* Config bar with glass effect */}
-      <div className="px-4 pt-3 pb-3 flex-shrink-0 space-y-3"
+      <div className="px-4 pt-3 pb-3 space-y-3"
         style={{
           borderBottom: '1px solid var(--border)',
           background: 'linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)',
@@ -607,7 +607,7 @@ export default function OptimizationPanel() {
 
       {/* Summary bar */}
       {recommendations.length > 0 && (
-        <div className="px-5 py-3 border-b flex-shrink-0 relative" style={{
+        <div className="px-5 py-3 border-b relative" style={{
           background: 'linear-gradient(180deg, rgba(255,255,255,0.02) 0%, transparent 100%)',
           borderColor: 'var(--border)',
           backdropFilter: 'blur(12px)',
@@ -659,9 +659,9 @@ export default function OptimizationPanel() {
       )}
 
       {/* Main area */}
-      <div className="flex-1 overflow-y-auto">
+      <div>
         {recommendations.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full" style={{ minHeight: 400 }}>
+          <div className="flex flex-col items-center justify-center" style={{ minHeight: 'calc(100vh - 300px)' }}>
             <div className="text-center px-8 max-w-md">
 
               {/* Animated gradient ring icon */}
@@ -796,16 +796,14 @@ export default function OptimizationPanel() {
 
             {/* Recommendation cards */}
             {recommendations.map((rec, idx) => (
-              <div key={rec.currentInstance + rec.serviceId + rec.metricValue}
+              <div key={rec.uid}
                 style={{
                   animation: `fade-in 0.4s ease ${idx * 0.08}s forwards`,
                   opacity: 0,
                 }}>
                 <RecommendationCard
                   rec={rec}
-                  onRemove={() => handleRemove(addedResources.find(r =>
-                    r.serviceId === rec.serviceId && r.instanceType === rec.currentInstance
-                  )?.uid ?? '')} />
+                  onRemove={() => handleRemove(rec.uid)} />
               </div>
             ))}
           </div>

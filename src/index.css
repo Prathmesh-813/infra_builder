@@ -139,7 +139,7 @@
 ═══════════════════════════════════════════════════════════════════════════ */
 * { box-sizing: border-box; }
 
-html { transition: background-color 0.25s ease, color 0.25s ease; }
+html { font-size: 125%; transition: background-color 0.25s ease, color 0.25s ease; }
 
 body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;

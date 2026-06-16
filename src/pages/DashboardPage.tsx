@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Cpu, FileCode2, BarChart3, Settings, Layers3, LogOut, TrendingUp, Activity, Sparkles, Crown, ArrowRight } from 'lucide-react';
+import { Cpu, FileCode2, BarChart3, Settings, Layers3, LogOut, TrendingUp, Activity, Sparkles, Crown, ArrowRight, PieChart, DollarSign } from 'lucide-react';
 import { useSubscriptionStore } from '../store/subscriptionStore';
 
 const FEATURES = [
@@ -80,6 +80,32 @@ const FEATURES = [
     glow: 'rgba(56,189,248,0.2)',
     gradient: 'linear-gradient(135deg, #0ea5e9, #38bdf8)',
     darkBg: 'rgba(56,189,248,0.04)',
+  },
+  {
+    route: '/analytics',
+    icon: PieChart,
+    label: 'Analytics',
+    tagline: 'Usage & insights',
+    desc: 'Infrastructure analytics and insights dashboard. Track resource usage, cost breakdowns, provider distribution, complexity metrics, and team activity across all your projects.',
+    color: '#22c55e',
+    bg: 'rgba(34,197,94,0.06)',
+    border: 'rgba(34,197,94,0.25)',
+    glow: 'rgba(34,197,94,0.2)',
+    gradient: 'linear-gradient(135deg, #16a34a, #22c55e)',
+    darkBg: 'rgba(34,197,94,0.04)',
+  },
+  {
+    route: '/pricing',
+    icon: DollarSign,
+    label: 'Pricing',
+    tagline: 'Plans & billing',
+    desc: 'View subscription plans and pricing. Upgrade to Pro for AI-powered infrastructure generation, live pricing, cost comparison, monitoring, and priority support.',
+    color: '#f59e0b',
+    bg: 'rgba(245,158,11,0.06)',
+    border: 'rgba(245,158,11,0.25)',
+    glow: 'rgba(245,158,11,0.2)',
+    gradient: 'linear-gradient(135deg, #d97706, #f59e0b)',
+    darkBg: 'rgba(245,158,11,0.04)',
   },
 ];
 
