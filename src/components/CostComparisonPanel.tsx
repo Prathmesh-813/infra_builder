@@ -14,7 +14,7 @@ import { applyLivePrices, clearLivePriceCache, ProviderLivePrices, resolveAllLiv
 import { useCompareCardLivePrices } from '../hooks/useCompareCardLivePrice';
 import AzurePricingPanel from './AzurePricingPanel';
 import ProviderIcon from './ProviderIcon';
-import { buildExportData, exportToPDF, exportToExcel } from '../utils/costReportExport';
+import { buildExportData, exportToPDF, exportToExcel, type ExportServiceConfig } from '../utils/costReportExport';
 
 interface AddedService {
   uid: string;
@@ -491,6 +491,45 @@ function CompareCard({ added, onRemove, onReconfigure, awsLiveEnabled, azureLive
             })}
           </div>
 
+          {/* Configuration summary */}
+          <div className="rounded-xl overflow-hidden border" style={{ borderColor: 'var(--border)' }}>
+            <div className="flex items-center gap-2 px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider"
+              style={{ background: 'var(--bg-elevated)', color: 'var(--text-faint)', borderBottom: '1px solid var(--border)' }}>
+              <Settings2 size={11} /> Per-Provider Configuration
+            </div>
+            <div className="divide-y" style={{ borderColor: 'var(--border-subtle)' }}>
+              {avgs.map((p, i) => {
+                const meta = PROVIDER_META[p.provider as ComparisonProvider];
+                const cfg = added.configs[p.provider as ComparisonProvider] ?? {};
+                const cfgKeys = Object.keys(cfg);
+                return (
+                  <div key={p.provider} className="px-4 py-2.5 flex items-start gap-3"
+                    style={{ background: i % 2 === 0 ? 'rgba(255,255,255,0.015)' : 'transparent' }}>
+                    <ProviderIcon provider={meta.icon as any} size={16} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold" style={{ color: meta.color }}>{p.serviceLabel}</p>
+                      {cfgKeys.length > 0 ? (
+                        <div className="flex flex-wrap gap-1.5 mt-1">
+                          {cfgKeys.map(k => (
+                            <span key={k} className="text-[9px] px-1.5 py-0.5 rounded-md"
+                              style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border-subtle)', color: 'var(--text-muted)' }}>
+                              {k}: <span className="font-semibold" style={{ color: meta.color }}>{String(cfg[k])}</span>
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-[9px] mt-0.5" style={{ color: 'var(--text-faint)' }}>Default configuration</p>
+                      )}
+                    </div>
+                    <p className="text-xs font-bold flex-shrink-0" style={{ color: p.avg === minAvg ? '#34d399' : 'var(--text-primary)' }}>
+                      ${p.avg.toFixed(0)}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Savings callout */}
           {savings > 0 && (
             <div className="flex items-center gap-3 px-4 py-3 rounded-xl"
@@ -519,6 +558,7 @@ export default function CostComparisonPanel() {
   const [azureLiveEnabled, setAzureLiveEnabled] = useState(false);
   const [gcpLiveEnabled, setGcpLiveEnabled] = useState(false);
   const [exporting, setExporting] = useState<'pdf' | 'excel' | null>(null);
+  const [projectionYears, setProjectionYears] = useState<1 | 3 | 5>(1);
 
   const [awsRegion, setAwsRegion] = useState('us-east-1');
   const [azureRegion, setAzureRegion] = useState('eastus');
@@ -610,6 +650,21 @@ export default function CostComparisonPanel() {
 
   const cheapest = providerTotals[0];
   const mostExpensive = providerTotals[providerTotals.length - 1];
+  const grandTotalMonthly = providerTotals.reduce((s, t) => s + t.total, 0);
+
+  const configDetails: ExportServiceConfig[] = addedServices.map((svc, i) => {
+    const r = results[i];
+    return {
+      serviceId: svc.serviceId,
+      serviceName: r?.serviceName ?? svc.serviceId,
+      category: r?.category ?? '',
+      configs: (Object.keys(PROVIDER_META) as ComparisonProvider[]).map(pid => ({
+        provider: pid,
+        providerLabel: PROVIDER_META[pid].label,
+        fields: svc.configs[pid] ?? {},
+      })),
+    };
+  });
 
   const handleExportPDF = useCallback(async () => {
     if (!containerRef.current) return;
@@ -626,13 +681,13 @@ export default function CostComparisonPanel() {
     if (results.length === 0) return;
     setExporting('excel');
     try {
-      const data = buildExportData(results, providerTotals);
+      const data = buildExportData(results, providerTotals, configDetails);
       exportToExcel(data, `cost-comparison-${Date.now()}`);
     } catch (e) {
       console.error('Excel export failed:', e);
     }
     setExporting(null);
-  }, [results, providerTotals]);
+  }, [results, providerTotals, configDetails]);
 
   const [showExportMenu, setShowExportMenu] = useState(false);
 
@@ -681,12 +736,25 @@ export default function CostComparisonPanel() {
       {addedServices.length > 0 && (
         <div className="px-5 py-4 border-b flex-shrink-0"
           style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}>
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
             <div className="flex items-center gap-2">
               <BarChart3 size={15} className="text-purple-400" />
               <span className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>
-                Total Monthly Cost — {addedServices.length} service{addedServices.length !== 1 ? 's' : ''}
+                Total Cost — {addedServices.length} service{addedServices.length !== 1 ? 's' : ''}
               </span>
+              {/* Projection toggle */}
+              <div className="flex items-center gap-0.5 ml-3 rounded-lg overflow-hidden" style={{ border: '1px solid var(--border)', background: 'rgba(255,255,255,0.03)' }}>
+                {([1, 3, 5] as const).map(y => (
+                  <button key={y} onClick={() => setProjectionYears(y)}
+                    className="text-[10px] font-semibold px-2.5 py-1 transition-all"
+                    style={{
+                      background: projectionYears === y ? 'var(--accent)' : 'transparent',
+                      color: projectionYears === y ? '#fff' : 'var(--text-muted)',
+                    }}>
+                    {y}Y
+                  </button>
+                ))}
+              </div>
             </div>
             <div className="flex items-center gap-2">
               {/* Export dropdown */}
@@ -733,6 +801,7 @@ export default function CostComparisonPanel() {
               const isBest = i === 0;
               const savings = mostExpensive.total > 0 && isBest
                 ? Math.round((1 - t.total / mostExpensive.total) * 100) : 0;
+              const projected = t.total * projectionYears * 12;
               return (
                 <div key={t.id} className="rounded-xl p-3 transition-all"
                   style={{
@@ -747,8 +816,12 @@ export default function CostComparisonPanel() {
                   </div>
                   <p className="text-xl font-bold leading-none" style={{ color: isBest ? '#34d399' : t.color }}>
                     ${t.total.toFixed(0)}
+                    <span className="text-[10px] font-normal ml-0.5" style={{ color: 'var(--text-faint)' }}>/mo</span>
                   </p>
-                  <p className="text-[10px] mt-1" style={{ color: 'var(--text-faint)' }}>/month</p>
+                  <p className="text-sm font-bold mt-1.5" style={{ color: isBest ? '#34d399' : t.color }}>
+                    ${projected.toFixed(0)}
+                    <span className="text-[10px] font-medium ml-0.5" style={{ color: 'var(--text-muted)' }}>/{projectionYears}yr</span>
+                  </p>
                   {isBest && savings > 0 && (
                     <p className="text-[9px] font-bold text-emerald-400 mt-1">Saves {savings}% vs most expensive</p>
                   )}
@@ -767,6 +840,37 @@ export default function CostComparisonPanel() {
                 <span className="font-bold">${cheapest.total.toFixed(0)}/mo</span> — saves{' '}
                 <span className="font-bold">${(mostExpensive.total - cheapest.total).toFixed(0)}/mo</span> vs {mostExpensive.label}
               </p>
+            </div>
+          )}
+
+          {/* Insight cards */}
+          {addedServices.length > 0 && (
+            <div className="grid grid-cols-3 gap-3 mt-3">
+              <div className="rounded-xl p-3" style={{ background: 'rgba(139,92,246,0.06)', border: '1px solid rgba(139,92,246,0.2)' }}>
+                <p className="text-[9px] font-bold uppercase tracking-wider flex items-center gap-1 mb-1" style={{ color: '#a78bfa' }}>
+                  <BarChart3 size={11} /> Services Compared
+                </p>
+                <p className="text-lg font-bold" style={{ color: '#a78bfa' }}>{addedServices.length}</p>
+                <p className="text-[9px]" style={{ color: 'var(--text-faint)' }}>across {providerTotals.filter(t => t.total > 0).length} providers</p>
+              </div>
+              <div className="rounded-xl p-3" style={{ background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.2)' }}>
+                <p className="text-[9px] font-bold uppercase tracking-wider flex items-center gap-1 mb-1" style={{ color: '#34d399' }}>
+                  <TrendingDown size={11} /> Potential Savings
+                </p>
+                <p className="text-lg font-bold" style={{ color: '#34d399' }}>
+                  ${(mostExpensive.total - cheapest.total).toFixed(0)}
+                </p>
+                <p className="text-[9px]" style={{ color: 'var(--text-faint)' }}>/month by switching to {cheapest.label}</p>
+              </div>
+              <div className="rounded-xl p-3" style={{ background: 'rgba(251,191,36,0.06)', border: '1px solid rgba(251,191,36,0.2)' }}>
+                <p className="text-[9px] font-bold uppercase tracking-wider flex items-center gap-1 mb-1" style={{ color: '#fbbf24' }}>
+                  <Zap size={11} /> Annual Spend
+                </p>
+                <p className="text-lg font-bold" style={{ color: '#fbbf24' }}>
+                  ${(grandTotalMonthly * 12).toFixed(0)}
+                </p>
+                <p className="text-[9px]" style={{ color: 'var(--text-faint)' }}>projected · {addedServices.length} services</p>
+              </div>
             </div>
           )}
         </div>

@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
-import { Cpu, FileCode2, BarChart3, Settings, Layers3, LogOut, TrendingUp, Activity } from 'lucide-react';
+import { Cpu, FileCode2, BarChart3, Settings, Layers3, LogOut, TrendingUp, Activity, Sparkles, Crown, ArrowRight } from 'lucide-react';
+import { useSubscriptionStore } from '../store/subscriptionStore';
 
 const FEATURES = [
   {
@@ -175,6 +176,39 @@ export default function DashboardPage() {
           Select a tool to start designing, comparing, and managing your cloud infrastructure
         </p>
       </div>
+
+      {/* ── Upgrade banner (free tier only) ────────────────────────────────── */}
+      {useSubscriptionStore.getState().tier === 'free' && (
+        <div className="relative z-10 px-8 pb-4 flex-shrink-0">
+          <div className="relative rounded-2xl overflow-hidden p-[1px]">
+            <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.5), rgba(139,92,246,0.3), rgba(99,102,241,0.5))' }} />
+            <div className="relative rounded-2xl p-4 flex items-center justify-between gap-4"
+              style={{ background: 'var(--bg-surface-2)' }}>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+                  style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', boxShadow: '0 0 16px rgba(99,102,241,0.35)' }}>
+                  <Crown size={18} className="text-white" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>
+                    Unlock Pro Features
+                  </p>
+                  <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
+                    Live pricing, unlimited projects, AI optimization, and more
+                  </p>
+                </div>
+              </div>
+              <button onClick={() => navigate('/pricing')}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold text-white transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] flex-shrink-0 group"
+                style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', boxShadow: '0 4px 20px rgba(99,102,241,0.35)' }}>
+                <Sparkles size={13} />
+                View Plans
+                <ArrowRight size={13} className="transition-transform duration-300 group-hover:translate-x-0.5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Feature cards grid ────────────────────────────────────────────── */}
       <div className="relative z-10 flex-1 overflow-y-auto px-8 pb-8">

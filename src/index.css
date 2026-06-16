@@ -74,60 +74,60 @@
    CSS CUSTOM PROPERTIES — LIGHT THEME
 ═══════════════════════════════════════════════════════════════════════════ */
 [data-theme="light"] {
-  /* Backgrounds */
-  --bg-app:        #f1f5f9;
-  --bg-surface:    rgba(255,255,255,0.98);
-  --bg-surface-2:  rgba(248,250,252,0.98);
-  --bg-elevated:   rgba(255,255,255,0.95);
-  --bg-card:       rgba(0,0,0,0.02);
-  --bg-card-hover: rgba(0,0,0,0.04);
-  --bg-input:      rgba(0,0,0,0.04);
-  --bg-overlay:    rgba(0,0,0,0.5);
+  /* Backgrounds — warm, refined off-white palette */
+  --bg-app:        #f0f2f5;
+  --bg-surface:    rgba(255,255,255,0.95);
+  --bg-surface-2:  rgba(249,250,251,0.97);
+  --bg-elevated:   rgba(255,255,255,0.92);
+  --bg-card:       rgba(99,102,241,0.03);
+  --bg-card-hover: rgba(99,102,241,0.06);
+  --bg-input:      rgba(0,0,0,0.03);
+  --bg-overlay:    rgba(0,0,0,0.4);
 
-  /* Borders */
-  --border:        rgba(0,0,0,0.08);
-  --border-subtle: rgba(0,0,0,0.05);
-  --border-input:  rgba(0,0,0,0.12);
-  --border-strong: rgba(0,0,0,0.18);
+  /* Borders — softer, more sophisticated */
+  --border:        rgba(0,0,0,0.07);
+  --border-subtle: rgba(0,0,0,0.04);
+  --border-input:  rgba(0,0,0,0.1);
+  --border-strong: rgba(0,0,0,0.14);
 
   /* Text */
-  --text-primary:   #0f172a;
-  --text-secondary: #475569;
-  --text-muted:     #94a3b8;
-  --text-faint:     #cbd5e1;
+  --text-primary:   #0b1423;
+  --text-secondary: #3b4a5f;
+  --text-muted:     #7a8a9f;
+  --text-faint:     #b8c5d4;
   --text-inverse:   #f8fafc;
 
   /* Accent (indigo) */
   --accent:         #4f46e5;
   --accent-light:   #6366f1;
-  --accent-bg:      rgba(99,102,241,0.08);
-  --accent-border:  rgba(99,102,241,0.3);
-  --accent-glow:    rgba(99,102,241,0.15);
+  --accent-bg:      rgba(99,102,241,0.07);
+  --accent-border:  rgba(99,102,241,0.25);
+  --accent-glow:    rgba(99,102,241,0.12);
 
   /* Canvas */
-  --canvas-bg:      #f8fafc;
-  --canvas-dot:     rgba(99,102,241,0.12);
+  --canvas-bg:      #f0f2f5;
+  --canvas-dot:     rgba(99,102,241,0.08);
 
   /* Sidebar */
-  --sidebar-bg:     linear-gradient(180deg, rgba(255,255,255,0.99) 0%, rgba(248,250,252,0.99) 100%);
+  --sidebar-bg:     linear-gradient(180deg, rgba(255,255,255,0.97) 0%, rgba(248,249,251,0.97) 100%);
 
   /* Header */
-  --header-bg:      linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.98) 100%);
-  --header-shadow:  0 1px 0 rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.06);
+  --header-bg:      linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(249,250,251,0.96) 100%);
+  --header-shadow:  0 1px 0 rgba(0,0,0,0.06), 0 4px 20px rgba(0,0,0,0.04);
 
   /* Code panel */
-  --code-bg:        #f8fafc;
+  --code-bg:        #f4f6f9;
 
   /* Scrollbar */
-  --scrollbar-thumb: rgba(99,102,241,0.25);
-  --scrollbar-hover: rgba(99,102,241,0.45);
+  --scrollbar-thumb: rgba(99,102,241,0.2);
+  --scrollbar-hover: rgba(99,102,241,0.35);
 
   /* Node */
-  --node-shadow:    0 2px 12px rgba(0,0,0,0.1);
-  --node-inner:     inset 0 1px 0 rgba(255,255,255,0.8);
+  --node-shadow:    0 2px 8px rgba(0,0,0,0.06), 0 4px 24px rgba(0,0,0,0.04);
+  --node-inner:     inset 0 1px 0 rgba(255,255,255,0.9);
 
   /* Right panel tab */
-  --tab-active-bg:  rgba(99,102,241,0.08);
+  --tab-active-bg:  rgba(99,102,241,0.07);
   --tab-inactive:   #94a3b8;
 
   /* Monaco theme */
@@ -147,6 +147,30 @@ body {
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
   transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+/* Subtle ambient gradient overlay for light mode depth */
+[data-theme="light"] body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  background:
+    radial-gradient(ellipse 80% 60% at 0% 20%, rgba(99,102,241,0.04) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at 100% 80%, rgba(56,189,248,0.03) 0%, transparent 60%);
+}
+
+/* Dark mode ambient glow refinement */
+[data-theme="dark"] body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  background:
+    radial-gradient(ellipse 70% 50% at 0% 20%, rgba(99,102,241,0.04) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 40% at 100% 80%, rgba(56,189,248,0.03) 0%, transparent 60%);
 }
 
 /* ── Utility classes using CSS vars ──────────────────────────────────────── */
@@ -199,6 +223,11 @@ body {
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--border);
+}
+
+/* Light mode card shadow — adds refined depth without heaviness */
+[data-theme="light"] .shadow-soft {
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.03);
 }
 
 /* ── Gradient text ────────────────────────────────────────────────────────── */
@@ -329,9 +358,27 @@ body {
 .canvas-bg {
   background-color: var(--canvas-bg);
   background-image:
-    radial-gradient(circle at 20% 20%, rgba(99,102,241,0.04) 0%, transparent 50%),
+    radial-gradient(circle at 20% 20%, rgba(99,102,241,0.05) 0%, transparent 50%),
     radial-gradient(circle at 80% 80%, rgba(56,189,248,0.04) 0%, transparent 50%);
   transition: background-color 0.25s ease;
+}
+
+/* Subtle dot mesh for light mode */
+[data-theme="light"] .canvas-bg {
+  background-image:
+    radial-gradient(circle at 20% 20%, rgba(99,102,241,0.05) 0%, transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(56,189,248,0.04) 0%, transparent 50%),
+    radial-gradient(rgba(99,102,241,0.06) 1px, transparent 1px);
+  background-size: auto, auto, 24px 24px;
+}
+
+/* Subtle dot mesh for dark mode */
+[data-theme="dark"] .canvas-bg {
+  background-image:
+    radial-gradient(circle at 20% 20%, rgba(99,102,241,0.06) 0%, transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(56,189,248,0.05) 0%, transparent 50%),
+    radial-gradient(rgba(99,102,241,0.08) 1px, transparent 1px);
+  background-size: auto, auto, 28px 28px;
 }
 
 /* ── Provider pill ───────────────────────────────────────────────────────── */

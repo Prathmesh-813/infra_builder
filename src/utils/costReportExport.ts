@@ -4,6 +4,17 @@ import * as XLSX from 'xlsx';
 import type { ComparisonResult } from './costComparisonEngine';
 import { PROVIDER_META } from '../data/costComparisonData';
 
+export interface ExportServiceConfig {
+  serviceId: string;
+  serviceName: string;
+  category: string;
+  configs: Array<{
+    provider: string;
+    providerLabel: string;
+    fields: Record<string, string | number | boolean>;
+  }>;
+}
+
 export interface ExportData {
   date: string;
   totalCosts: Record<string, number>;
@@ -19,6 +30,7 @@ export interface ExportData {
     winner: string;
     savings: number;
   }>;
+  configDetails: ExportServiceConfig[];
 }
 
 function sanitizeProvider(id: string): 'aws' | 'azure' | 'gcp' | 'onprem' {
@@ -26,7 +38,11 @@ function sanitizeProvider(id: string): 'aws' | 'azure' | 'gcp' | 'onprem' {
   return 'aws';
 }
 
-export function buildExportData(results: ComparisonResult[], providerTotals: { id: string; total: number }[]): ExportData {
+export function buildExportData(
+  results: ComparisonResult[],
+  providerTotals: { id: string; total: number }[],
+  configDetails?: ExportServiceConfig[],
+): ExportData {
   const totalCosts: Record<string, number> = {};
   for (const t of providerTotals) {
     totalCosts[t.id] = t.total;
@@ -53,7 +69,7 @@ export function buildExportData(results: ComparisonResult[], providerTotals: { i
     };
   });
 
-  return { date: new Date().toISOString(), totalCosts, services };
+  return { date: new Date().toISOString(), totalCosts, services, configDetails: configDetails ?? [] };
 }
 
 export async function exportToPDF(element: HTMLElement, filename: string = 'cost-comparison-report') {
@@ -99,7 +115,20 @@ export function exportToExcel(data: ExportData, filename: string = 'cost-compari
     const meta = PROVIDER_META[sanitizeProvider(id)];
     summaryRows.push([meta?.label ?? id, Math.round(total)]);
   }
-  summaryRows.push([], ['* Costs are monthly estimates in USD']);
+  summaryRows.push(
+    [],
+    ['* Costs are monthly estimates in USD'],
+  );
+
+  // Add yearly projections
+  const grandTotal = Object.values(data.totalCosts).reduce((s, v) => s + v, 0);
+  summaryRows.push(
+    [],
+    ['Annual Projection'],
+    ['1-Year Total', `$${Math.round(grandTotal * 12).toLocaleString()}`],
+    ['3-Year Total', `$${Math.round(grandTotal * 36).toLocaleString()}`],
+    ['5-Year Total', `$${Math.round(grandTotal * 60).toLocaleString()}`],
+  );
 
   const summarySheet = XLSX.utils.aoa_to_sheet(summaryRows);
   XLSX.utils.book_append_sheet(wb, summarySheet, 'Summary');
@@ -129,6 +158,29 @@ export function exportToExcel(data: ExportData, filename: string = 'cost-compari
     wch: Math.max(...detailRows.map(r => String(r[i] ?? '').length)) + 2,
   }));
   detailSheet['!cols'] = colWidths;
+
+  // Configuration Details sheet
+  if (data.configDetails.length > 0) {
+    const configRows: (string | number | boolean)[][] = [
+      ['Configuration Details'],
+      [`Generated: ${new Date(data.date).toLocaleString()}`],
+      [],
+      ['Service', 'Category', 'Provider', 'Parameter', 'Value'],
+    ];
+    for (const svc of data.configDetails) {
+      for (const cfg of svc.configs) {
+        for (const [key, val] of Object.entries(cfg.fields)) {
+          configRows.push([svc.serviceName, svc.category, cfg.providerLabel, key, val]);
+        }
+      }
+    }
+    const configSheet = XLSX.utils.aoa_to_sheet(configRows);
+    const configColWidths = configRows[0].map((_, i) => ({
+      wch: Math.max(...configRows.map(r => String(r[i] ?? '').length)) + 2,
+    }));
+    configSheet['!cols'] = configColWidths;
+    XLSX.utils.book_append_sheet(wb, configSheet, 'Configuration');
+  }
 
   XLSX.writeFile(wb, `${filename}.xlsx`);
 }

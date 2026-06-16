@@ -1,6 +1,9 @@
-import { Layout, ChevronDown, Cpu, ScanLine, Sun, Moon, Cloud } from 'lucide-react';
+import { Layout, ChevronDown, Cpu, ScanLine, Sun, Moon, Cloud, Crown, Sparkles } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { useTheme } from '../context/ThemeContext';
+import { useSubscriptionStore } from '../store/subscriptionStore';
+import { SUBSCRIPTION_PLANS } from '../data/subscription';
+import { useNavigate } from 'react-router-dom';
 import ProviderIcon from './ProviderIcon';
 
 const REGIONS: Record<string, string[]> = {
@@ -25,6 +28,34 @@ interface HeaderProps {
   onOpenTemplates?: () => void;
   onOpenDiagramScan?: () => void;
   onOpenImport?: () => void;
+}
+
+function HeaderSubscriptionBadge() {
+  const { tier } = useSubscriptionStore();
+  const navigate = useNavigate();
+  const plan = SUBSCRIPTION_PLANS.find(p => p.id === tier)!;
+  const isFree = tier === 'free';
+
+  return (
+    <button
+      onClick={() => navigate('/pricing')}
+      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-semibold transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
+      style={{
+        background: isFree ? 'rgba(99,102,241,0.12)' : 'rgba(34,197,94,0.12)',
+        border: `1px solid ${isFree ? 'rgba(99,102,241,0.3)' : 'rgba(34,197,94,0.3)'}`,
+        color: isFree ? '#818cf8' : '#4ade80',
+      }}
+    >
+      {isFree ? <Sparkles size={11} /> : <Crown size={11} />}
+      {plan.name}
+      {isFree && (
+        <span className="ml-1 text-[8px] px-1.5 py-0.5 rounded-full font-bold"
+          style={{ background: 'rgba(99,102,241,0.2)', color: '#a5b4fc' }}>
+          UPGRADE
+        </span>
+      )}
+    </button>
+  );
 }
 
 export default function Header({ dashboard, onOpenTemplates, onOpenDiagramScan, onOpenImport }: HeaderProps) {
@@ -167,6 +198,9 @@ export default function Header({ dashboard, onOpenTemplates, onOpenDiagramScan, 
 
       {/* ── Right controls ────────────────────────────────────────────────── */}
       <div className="flex items-center gap-3 flex-shrink-0">
+        {/* ── Subscription badge ────────────────────────────────────────── */}
+        <HeaderSubscriptionBadge />
+
         {!isAnsible && !isCostCompare && (
           <div className="flex items-center gap-2">
             <span className="text-[11px] font-medium" style={{ color: 'var(--text-muted)' }}>Region</span>
