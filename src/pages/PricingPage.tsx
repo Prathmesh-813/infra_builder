@@ -1,5 +1,6 @@
-import { useNavigate } from 'react-router-dom';
-import { Check, X, Sparkles, ArrowLeft, Zap, Shield, Cloud, RefreshCw, ArrowRight, Crown } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Check, X, Sparkles, ArrowLeft, Zap, Shield, Cloud, RefreshCw, ArrowRight, Crown, Loader2 } from 'lucide-react';
 import { SUBSCRIPTION_PLANS, SubscriptionTier } from '../data/subscription';
 import { useSubscriptionStore } from '../store/subscriptionStore';
 
@@ -30,10 +31,55 @@ const COMPARISON_ROWS = [
 
 export default function PricingPage() {
   const navigate = useNavigate();
-  const { tier, isAnnual, setIsAnnual, upgrade } = useSubscriptionStore();
+  const [searchParams] = useSearchParams();
+  const { tier, isAnnual, setIsAnnual, verifyStripeSession, verifying } = useSubscriptionStore();
+  const [checkingOut, setCheckingOut] = useState<string | null>(null);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
-  const handleUpgrade = (planId: SubscriptionTier) => {
-    upgrade(planId);
+  // Verify Stripe session on mount (when redirected back from Stripe)
+  useEffect(() => {
+    const sessionId = searchParams.get('session_id');
+    const status = searchParams.get('status');
+    if (sessionId && status === 'success') {
+      verifyStripeSession(sessionId);
+    }
+  }, [searchParams, verifyStripeSession]);
+
+  const handleUpgrade = async (planId: SubscriptionTier) => {
+    if (planId === 'free') return;
+
+    if (planId === 'enterprise') {
+      window.location.href = 'mailto:sales@infrastudio.dev?subject=Enterprise%20Plan%20Inquiry';
+      return;
+    }
+
+    setCheckingOut(planId);
+    setCheckoutError(null);
+
+    try {
+      const res = await fetch('/api/stripe/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          plan_id: planId,
+          is_annual: isAnnual,
+          success_url: window.location.origin + '/pricing',
+          cancel_url: window.location.origin + '/pricing',
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || 'Failed to create checkout session');
+      }
+
+      const data = await res.json();
+      window.location.href = data.url;
+    } catch (err: any) {
+      setCheckoutError(err.message || 'Something went wrong');
+    } finally {
+      setCheckingOut(null);
+    }
   };
 
   const annualPrice = (monthly: number) => Math.round(monthly * 12 * 0.8);
@@ -71,7 +117,7 @@ export default function PricingPage() {
           style={{ background: 'var(--accent-bg)', border: '1px solid var(--accent-border)' }}>
           <Sparkles size={14} className="text-indigo-400" />
           <span className="text-xs font-semibold" style={{ color: 'var(--accent-light)' }}>
-            Current: {SUBSCRIPTION_PLANS.find(p => p.id === tier)?.name || 'Free'}
+            {verifying ? 'Updating...' : `Current: ${SUBSCRIPTION_PLANS.find(p => p.id === tier)?.name || 'Free'}`}
           </span>
         </div>
       </div>
@@ -79,6 +125,15 @@ export default function PricingPage() {
       {/* ── Scrollable content ────────────────────────────────────────────── */}
       <div className="relative z-10 flex-1 overflow-y-auto">
         <div className="max-w-6xl mx-auto px-8 py-10">
+
+          {/* Checkout error banner */}
+          {checkoutError && (
+            <div className="mb-6 px-4 py-3 rounded-xl text-xs font-medium flex items-center gap-2"
+              style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', color: '#f87171' }}>
+              <X size={14} />
+              {checkoutError}
+            </div>
+          )}
 
           {/* ── Billing toggle ──────────────────────────────────────────────── */}
           <div className="flex items-center justify-center gap-4 mb-10">
@@ -107,6 +162,7 @@ export default function PricingPage() {
             {SUBSCRIPTION_PLANS.map((plan, idx) => {
               const Icon = TIER_ICONS[plan.id as keyof typeof TIER_ICONS] || Zap;
               const isCurrent = tier === plan.id;
+              const isCheckingOut = checkingOut === plan.id;
               const displayPrice = isAnnual ? annualPrice(plan.price) : plan.price;
               const priceSuffix = isAnnual ? '/month, billed annually' : plan.priceLabel;
 
@@ -195,7 +251,8 @@ export default function PricingPage() {
                       ) : (
                         <button
                           onClick={() => handleUpgrade(plan.id)}
-                          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold text-white transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] mb-5 relative overflow-hidden group"
+                          disabled={isCheckingOut}
+                          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold text-white transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] mb-5 relative overflow-hidden group disabled:opacity-60 disabled:cursor-not-allowed"
                           style={{
                             background: plan.highlighted ? 'linear-gradient(135deg, #6366f1, #8b5cf6)' : 'var(--bg-elevated)',
                             border: plan.highlighted ? 'none' : '1px solid var(--border)',
@@ -204,8 +261,11 @@ export default function PricingPage() {
                           <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
                             style={{ background: plan.highlighted ? 'linear-gradient(135deg, #818cf8, #a78bfa)' : 'rgba(255,255,255,0.05)' }} />
                           <span className="relative flex items-center gap-2">
-                            {plan.id === 'enterprise' ? 'Contact Sales' : `Upgrade to ${plan.name}`}
-                            <ArrowRight size={13} />
+                            {isCheckingOut ? (
+                              <><Loader2 size={13} className="animate-spin" /> Processing...</>
+                            ) : (
+                              <>{plan.id === 'enterprise' ? 'Contact Sales' : `Upgrade to ${plan.name}`}<ArrowRight size={13} /></>
+                            )}
                           </span>
                         </button>
                       )}

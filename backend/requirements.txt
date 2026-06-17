@@ -6,3 +6,4 @@ pydantic==2.7.4
 python-dotenv==1.0.1
 google-auth==2.29.0
 urllib3==2.2.2
+stripe==11.4.1

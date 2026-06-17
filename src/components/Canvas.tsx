@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import ReactFlow, {
   Background,
   Controls,
@@ -11,12 +11,13 @@ import ReactFlow, {
   Connection,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { Zap } from 'lucide-react';
+import { Zap, Download, Image, FileText } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { ResourceDefinition } from '../types/resources';
 import ResourceNode from './ResourceNode';
 import CostCompareNode from './CostCompareNode';
 import { RESOURCE_DEFINITIONS } from '../data/resourceDefinitions';
+import { exportDiagramAsPNG, exportDiagramAsPDF } from '../utils/canvasExport';
 
 const nodeTypes = { resourceNode: ResourceNode, costCompareNode: CostCompareNode };
 
@@ -53,6 +54,7 @@ interface CanvasProps {
 export default function Canvas({ onDrop, onOpenBlueprints }: CanvasProps) {
   const { nodes, edges, onNodesChange, onEdgesChange, onConnect } = useStore();
   const rfInstanceRef = useRef<ReactFlowInstance | null>(null);
+  const [exportOpen, setExportOpen] = useState(false);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -98,7 +100,7 @@ export default function Canvas({ onDrop, onOpenBlueprints }: CanvasProps) {
   );
 
   return (
-    <div className="flex-1 h-full canvas-bg">
+    <div className="flex-1 h-full canvas-bg relative">
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -233,6 +235,56 @@ export default function Canvas({ onDrop, onOpenBlueprints }: CanvasProps) {
           </div>
         )}
       </ReactFlow>
+
+      {/* Export button */}
+      {nodes.length > 0 && (
+        <div className="absolute bottom-4 right-4 z-10">
+          <div className="relative">
+            <button
+              onClick={() => setExportOpen(!exportOpen)}
+              className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg transition-all"
+              style={{
+                background: 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)',
+                boxShadow: '0 0 16px rgba(99,102,241,0.35), inset 0 1px 0 rgba(255,255,255,0.1)',
+                color: 'white',
+              }}
+            >
+              <Download size={14} />
+              Export
+            </button>
+            {exportOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setExportOpen(false)} />
+                <div
+                  className="absolute bottom-full right-0 mb-2 z-20 rounded-lg overflow-hidden shadow-xl border"
+                  style={{
+                    background: '#1e293b',
+                    borderColor: 'rgba(99,102,241,0.3)',
+                    minWidth: 140,
+                  }}
+                >
+                  <button
+                    onClick={() => { setExportOpen(false); exportDiagramAsPNG(); }}
+                    className="flex items-center gap-2 w-full text-left text-xs px-3 py-2.5 transition-colors hover:bg-gray-700"
+                    style={{ color: '#e2e8f0' }}
+                  >
+                    <Image size={14} className="text-indigo-400" />
+                    Download as PNG
+                  </button>
+                  <button
+                    onClick={() => { setExportOpen(false); exportDiagramAsPDF(); }}
+                    className="flex items-center gap-2 w-full text-left text-xs px-3 py-2.5 transition-colors hover:bg-gray-700"
+                    style={{ color: '#e2e8f0' }}
+                  >
+                    <FileText size={14} className="text-indigo-400" />
+                    Download as PDF
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
