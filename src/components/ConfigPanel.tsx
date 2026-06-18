@@ -4,7 +4,7 @@ import SuggestionPanel from './SuggestionPanel';
 import type { ResourceField } from '../types/resources';
 
 export default function ConfigPanel() {
-  const { nodes, selectedNodeId, setSelectedNode, updateNodeConfig, updateNodeName } = useStore();
+  const { nodes, selectedNodeId, setSelectedNode, updateNodeConfig, updateNodeName, providerRegion } = useStore();
 
   const selectedNode = nodes.find((n) => n.id === selectedNodeId);
   if (!selectedNode) return null;
@@ -194,6 +194,41 @@ export default function ConfigPanel() {
             )}
           </div>
         ))}
+
+        {/* ── Region Override ─────────────────────────────────────────────── */}
+        <div className="pt-3 border-t" style={{ borderTopColor: 'rgba(255,255,255,0.06)' }}>
+          <label className="flex items-center gap-1.5 text-[11px] font-semibold text-gray-400 mb-2 uppercase tracking-wider">
+            <span className="text-[10px]">🌍</span>
+            Region Override
+          </label>
+          <div className="relative">
+            <select
+              value={String(config.region ?? '')}
+              onChange={(e) => updateNodeConfig(selectedNodeId!, { region: e.target.value || '' })}
+              className={`${inputClass} appearance-none pr-7 cursor-pointer`}
+              style={inputStyle}
+            >
+              <option value="">Use default ({providerRegion})</option>
+              <option value="us-east-1">us-east-1 (N. Virginia)</option>
+              <option value="us-east-2">us-east-2 (Ohio)</option>
+              <option value="us-west-1">us-west-1 (N. California)</option>
+              <option value="us-west-2">us-west-2 (Oregon)</option>
+              <option value="eu-west-1">eu-west-1 (Ireland)</option>
+              <option value="eu-west-2">eu-west-2 (London)</option>
+              <option value="eu-central-1">eu-central-1 (Frankfurt)</option>
+              <option value="ap-southeast-1">ap-southeast-1 (Singapore)</option>
+              <option value="ap-southeast-2">ap-southeast-2 (Sydney)</option>
+              <option value="ap-northeast-1">ap-northeast-1 (Tokyo)</option>
+              <option value="ap-south-1">ap-south-1 (Mumbai)</option>
+              <option value="sa-east-1">sa-east-1 (São Paulo)</option>
+              <option value="ca-central-1">ca-central-1 (Canada)</option>
+            </select>
+            <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-gray-600 text-[10px]">▾</div>
+          </div>
+          <p className="text-[10px] mt-1" style={{ color: 'rgba(100,116,139,0.7)' }}>
+            Overrides the global region for this resource only. Leave as "Use default" to use the project-wide region.
+          </p>
+        </div>
       </div>
 
       {/* ── Footer ─────────────────────────────────────────────────────────── */}

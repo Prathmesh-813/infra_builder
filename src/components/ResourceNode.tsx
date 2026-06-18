@@ -182,6 +182,22 @@ function ResourceNode({ data, id, selected }: NodeProps<ResourceNodeData>) {
           </button>
         </div>
 
+        {/* Region badge */}
+        {data.config?.region && (
+          <div className="mt-2">
+            <span
+              className="inline-flex items-center gap-1 text-[8px] font-medium px-1.5 py-0.5 rounded-full"
+              style={{
+                background: 'rgba(99,102,241,0.15)',
+                border: '1px solid rgba(99,102,241,0.3)',
+                color: '#a5b4fc',
+              }}
+            >
+              🌍 {data.config.region}
+            </span>
+          </div>
+        )}
+
         {/* Port chips */}
         {definition.ports.length > 0 && (
           <div

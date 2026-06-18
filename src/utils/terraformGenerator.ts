@@ -1,6 +1,7 @@
-import { Node } from 'reactflow';
+import { Node, Edge } from 'reactflow';
 import { ResourceNodeData } from '../types/resources';
 import { estimateCosts } from './costEstimator';
+import { generateAutoIAMStatements } from './autoConfig';
 
 type Cfg = Record<string, string | number | boolean>;
 
@@ -1101,7 +1102,8 @@ export function generateTerraform(
   nodes: Node<ResourceNodeData>[],
   region: string,
   profile: string,
-  showCostComments = false
+  showCostComments = false,
+  edges: Edge[] = []
 ): string {
   if (nodes.length === 0) {
     return '# Drag AWS resources onto the canvas to generate Terraform code\n';
@@ -1272,6 +1274,42 @@ export function generateTerraform(
         }
       }
       sections.push(block);
+    }
+  }
+
+  // ── Auto-generated IAM policies based on compute → data-service edges ──
+  if (edges.length > 0) {
+    const autoPolicies = generateAutoIAMStatements(nodes, edges);
+    for (const [, policy] of Object.entries(autoPolicies)) {
+      if (policy.statements.length === 0) continue;
+      const name = `${policy.roleName}-auto-policy`.replace(/[^a-zA-Z0-9_-]/g, '-').toLowerCase();
+      const L: string[] = [
+        '',
+        '# ── Auto-generated least-privilege IAM policy ──',
+        `resource "aws_iam_policy" "${name}" {`,
+        `  name        = "${name}"`,
+        `  description = "Auto-generated least-privilege policy for ${policy.roleName}"`,
+        '  policy = jsonencode({',
+        '    Version = "2012-10-17"',
+        '    Statement = [',
+      ];
+      for (const stmt of policy.statements) {
+        L.push('      {');
+        L.push(`        Effect   = "${stmt.Effect}"`);
+        L.push(`        Action   = ${JSON.stringify(stmt.Action)}`);
+        L.push(`        Resource = ${JSON.stringify(stmt.Resource)}`);
+        L.push('      },');
+      }
+      L.push('    ]',
+        '  })',
+        '}',
+        '',
+        `resource "aws_iam_role_policy_attachment" "${name}_attach" {`,
+        `  role       = aws_iam_role.${policy.roleName}.name`,
+        `  policy_arn = aws_iam_policy.${name}.arn`,
+        '}',
+      );
+      sections.push(L.join('\n'));
     }
   }
 

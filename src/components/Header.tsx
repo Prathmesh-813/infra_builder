@@ -1,4 +1,4 @@
-import { Layout, ChevronDown, Cpu, ScanLine, Sun, Moon, Cloud, Crown, Sparkles } from 'lucide-react';
+import { Layout, ChevronDown, Cpu, ScanLine, Sun, Moon, Cloud, Crown, Sparkles, Wand2 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { useTheme } from '../context/ThemeContext';
 import { useSubscriptionStore } from '../store/subscriptionStore';
@@ -28,6 +28,7 @@ interface HeaderProps {
   onOpenTemplates?: () => void;
   onOpenDiagramScan?: () => void;
   onOpenImport?: () => void;
+  onOpenPromptToDiagram?: () => void;
 }
 
 function HeaderSubscriptionBadge() {
@@ -58,7 +59,7 @@ function HeaderSubscriptionBadge() {
   );
 }
 
-export default function Header({ dashboard, onOpenTemplates, onOpenDiagramScan, onOpenImport }: HeaderProps) {
+export default function Header({ dashboard, onOpenTemplates, onOpenDiagramScan, onOpenImport, onOpenPromptToDiagram }: HeaderProps) {
   const { providerRegion, providerProfile, setProviderRegion, setProviderProfile, nodes, cloudProvider } = useStore();
   const { theme, toggleTheme, isDark } = useTheme();
   const regions = REGIONS[cloudProvider] ?? REGIONS.aws;
@@ -150,6 +151,29 @@ export default function Header({ dashboard, onOpenTemplates, onOpenDiagramScan, 
             <span
               className="text-[8px] px-1.5 py-0.5 rounded-full font-bold"
               style={{ background: 'rgba(99,102,241,0.2)', color: '#a5b4fc', border: '1px solid rgba(99,102,241,0.3)' }}
+            >
+              NEW
+            </span>
+          </button>
+        )}
+
+        {dashboard === 'terraform' && onOpenPromptToDiagram && (
+          <button
+            onClick={onOpenPromptToDiagram}
+            className="flex items-center gap-2 text-xs font-semibold px-4 py-2 rounded-lg transition-all group"
+            style={{
+              background: 'linear-gradient(135deg, rgba(99,102,241,0.2) 0%, rgba(139,92,246,0.15) 100%)',
+              border: '1px solid rgba(99,102,241,0.4)',
+            }}
+            title="Describe your architecture in natural language and generate a complete diagram"
+          >
+            <Wand2 size={13} className="text-indigo-400 group-hover:text-indigo-300 transition-colors" />
+            <span className="text-indigo-600 dark:text-indigo-300 group-hover:text-indigo-500 transition-colors" style={{ color: isDark ? '#a5b4fc' : '#6366f1' }}>
+              Prompt to Diagram
+            </span>
+            <span
+              className="text-[8px] px-1.5 py-0.5 rounded-full font-bold"
+              style={{ background: 'rgba(139,92,246,0.2)', color: '#c4b5fd', border: '1px solid rgba(139,92,246,0.3)' }}
             >
               NEW
             </span>

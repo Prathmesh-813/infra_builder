@@ -13,6 +13,7 @@ import SecurityPanel from '../components/SecurityPanel';
 import DiffPanel from '../components/DiffPanel';
 import DriftPanel from '../components/DriftPanel';
 import AIChatPanel from '../components/AIChatPanel';
+import PromptToDiagramModal from '../components/PromptToDiagramModal';
 import DiagramScanModal from '../components/DiagramScanModal';
 import ImportModal from '../components/ImportModal';
 import { ResourceDefinition } from '../types/resources';
@@ -46,6 +47,7 @@ export default function TerraformDashboard() {
   const [showTemplates, setShowTemplates] = useState(false);
   const [showDiagramScan, setShowDiagramScan] = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const [showPromptToDiagram, setShowPromptToDiagram] = useState(false);
   const [rightPanel, setRightPanel] = useState<RightPanel>('code');
   const blueprintOffset = useRef(1000);
 
@@ -117,6 +119,7 @@ export default function TerraformDashboard() {
         onOpenTemplates={() => setShowTemplates(true)}
         onOpenDiagramScan={() => setShowDiagramScan(true)}
         onOpenImport={() => setShowImport(true)}
+        onOpenPromptToDiagram={() => setShowPromptToDiagram(true)}
       />
 
       <div className="flex flex-1 overflow-hidden">
@@ -132,6 +135,7 @@ export default function TerraformDashboard() {
               draggedDefinition={draggedDefinition}
               onDrop={handleDrop}
               onOpenBlueprints={() => setShowBlueprints(true)}
+              onOpenPromptToDiagram={() => setShowPromptToDiagram(true)}
             />
             {selectedNodeId && <ConfigPanel />}
           </div>
@@ -206,6 +210,9 @@ export default function TerraformDashboard() {
       )}
       {showImport && (
         <ImportModal onClose={() => setShowImport(false)} />
+      )}
+      {showPromptToDiagram && (
+        <PromptToDiagramModal onClose={() => setShowPromptToDiagram(false)} />
       )}
     </div>
   );

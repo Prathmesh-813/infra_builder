@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import Editor from '@monaco-editor/react';
-import { Copy, Download, Check, DollarSign, TrendingUp, ChevronDown, ChevronUp, Package, Layers } from 'lucide-react';
+import { Copy, Download, Check, DollarSign, TrendingUp, ChevronDown, ChevronUp, Package, Layers, Edit3, Eye, AlertTriangle } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { generateTerraform } from '../utils/terraformGenerator';
 import { generateAzureTerraform } from '../utils/azureGenerator';
@@ -10,6 +10,7 @@ import { generateCrossplane, generateCrossplaneInstallManifest, generateCrosspla
 import { estimateCosts } from '../utils/costEstimator';
 import { buildTerraformProject, downloadAsZip } from '../utils/multiFileExport';
 import { buildEnvTerraformProject, downloadEnvProjectAsZip } from '../utils/envGenerator';
+import { parseHCL, mergeParsedConfig } from '../utils/hclParser';
 
 // ── Cost bar (AWS only) ───────────────────────────────────────────────────────
 function CostBar({ onToggleCosts, showCosts }: { onToggleCosts: () => void; showCosts: boolean }) {
@@ -77,13 +78,16 @@ function CostBar({ onToggleCosts, showCosts }: { onToggleCosts: () => void; show
 
 // ── Main CodePanel ────────────────────────────────────────────────────────────
 export default function CodePanel() {
-  const { nodes, edges, providerRegion, providerProfile, cloudProvider } = useStore();
+  const { nodes, edges, providerRegion, providerProfile, cloudProvider, updateNodeConfig } = useStore();
   const [copied, setCopied] = useState(false);
   const [showCosts, setShowCosts] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [activeTab, setActiveTab] = useState<string>('main');
   // Toggle between standard single-file view and env-based multi-file view
   const [envMode, setEnvMode] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [editableCode, setEditableCode] = useState<string>('');
+  const [syncMessage, setSyncMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const isAnsible = cloudProvider === 'ansible';
   const isAWS = cloudProvider === 'aws';
@@ -95,7 +99,7 @@ export default function CodePanel() {
 
   // Generate code based on provider
   const mainCode = useMemo(() => {
-    if (cloudProvider === 'aws') return generateTerraform(nodes, providerRegion, providerProfile, showCosts);
+    if (cloudProvider === 'aws') return generateTerraform(nodes, providerRegion, providerProfile, showCosts, edges);
     if (cloudProvider === 'azure') return generateAzureTerraform(nodes, providerRegion, providerProfile);
     if (cloudProvider === 'gcp') return generateGCPTerraform(nodes, providerRegion, providerProfile);
     if (cloudProvider === 'ansible') return generateAnsiblePlaybook(nodes, edges);
@@ -334,6 +338,20 @@ export default function CodePanel() {
         </div>
       )}
 
+      {/* Sync message banner */}
+      {syncMessage && (
+        <div className={`flex items-center gap-2 px-3 py-1.5 text-[10px] ${
+          syncMessage.type === 'success' ? 'bg-green-900/60 text-green-300' : 'bg-red-900/60 text-red-300'
+        }`}>
+          {syncMessage.type === 'success' ? <Check size={11} /> : <AlertTriangle size={11} />}
+          {syncMessage.text}
+          <button
+            onClick={() => setSyncMessage(null)}
+            className="ml-auto text-gray-500 hover:text-gray-300"
+          >✕</button>
+        </div>
+      )}
+
       {/* Toolbar */}
       <div className="flex items-center justify-between px-3 py-2 bg-gray-900 border-b border-gray-700 gap-2">
         {/* File tabs */}
@@ -364,6 +382,63 @@ export default function CodePanel() {
 
         {/* Actions */}
         <div className="flex items-center gap-1.5 flex-shrink-0">
+          {/* Edit mode toggle — Terraform only */}
+          {isTerraform && (
+            <button
+              onClick={() => {
+                if (!editMode) {
+                  setEditableCode(currentCode);
+                }
+                setEditMode(!editMode);
+                setSyncMessage(null);
+              }}
+              className={`flex items-center gap-1 text-[10px] px-2.5 py-1.5 rounded transition-colors ${
+                editMode
+                  ? 'bg-amber-600 text-white font-semibold'
+                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+              }`}
+              title={editMode ? 'Switch to view-only mode' : 'Edit code and sync back to canvas'}
+            >
+              {editMode ? <Eye size={11} /> : <Edit3 size={11} />}
+              {editMode ? 'View' : 'Edit'}
+            </button>
+          )}
+
+          {/* Apply Changes — shown in edit mode */}
+          {editMode && isTerraform && (
+            <button
+              onClick={() => {
+                try {
+                  const parsed = parseHCL(editableCode);
+                  let updated = 0;
+                  const nodeMap = new Map(nodes.map(n => [n.data?.resourceName, n]));
+                  for (const p of parsed) {
+                    const node = nodeMap.get(p.resourceName);
+                    if (node) {
+                      const merged = mergeParsedConfig(p, node.data.config);
+                      updateNodeConfig(node.id, merged);
+                      updated++;
+                    }
+                  }
+                  setSyncMessage({
+                    type: 'success',
+                    text: `Synced ${updated} resource(s) from code to canvas.`,
+                  });
+                  setEditMode(false);
+                } catch (e) {
+                  setSyncMessage({
+                    type: 'error',
+                    text: 'Failed to parse HCL. Check syntax and try again.',
+                  });
+                }
+              }}
+              className="flex items-center gap-1 text-[10px] bg-green-600 hover:bg-green-500 text-white font-semibold px-2.5 py-1.5 rounded transition-colors"
+            >
+              <Check size={11} />
+              Apply
+            </button>
+          )}
+
           <button
             onClick={handleCopy}
             className="flex items-center gap-1 text-[10px] bg-gray-700 hover:bg-gray-600 text-gray-200 px-2.5 py-1.5 rounded transition-colors"
@@ -406,10 +481,15 @@ export default function CodePanel() {
         <Editor
           height="100%"
           language={lang}
-          value={currentCode}
+          value={editMode ? editableCode : currentCode}
           theme="vs-dark"
+          onChange={(val) => {
+            if (editMode && val !== undefined) {
+              setEditableCode(val);
+            }
+          }}
           options={{
-            readOnly: true,
+            readOnly: !editMode,
             minimap: { enabled: false },
             fontSize: 14,
             lineNumbers: 'on',

@@ -7,17 +7,19 @@ import ReactFlow, {
   ReactFlowInstance,
   ConnectionLineType,
   MarkerType,
+  Node,
   Edge,
   Connection,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { Zap, Download, Image, FileText } from 'lucide-react';
+import { Zap, Download, Image, FileText, Wand2 } from 'lucide-react';
 import { useStore } from '../store/useStore';
-import { ResourceDefinition } from '../types/resources';
+import { ResourceDefinition, ResourceNodeData } from '../types/resources';
 import ResourceNode from './ResourceNode';
 import CostCompareNode from './CostCompareNode';
 import { RESOURCE_DEFINITIONS } from '../data/resourceDefinitions';
 import { exportDiagramAsPNG, exportDiagramAsPDF } from '../utils/canvasExport';
+import { autoConfigureSG, propagateTags } from '../utils/autoConfig';
 
 const nodeTypes = { resourceNode: ResourceNode, costCompareNode: CostCompareNode };
 
@@ -49,10 +51,11 @@ interface CanvasProps {
   draggedDefinition: ResourceDefinition | null;
   onDrop: (e: React.DragEvent, rfInstance: ReactFlowInstance) => void;
   onOpenBlueprints?: () => void;
+  onOpenPromptToDiagram?: () => void;
 }
 
-export default function Canvas({ onDrop, onOpenBlueprints }: CanvasProps) {
-  const { nodes, edges, onNodesChange, onEdgesChange, onConnect } = useStore();
+export default function Canvas({ onDrop, onOpenBlueprints, onOpenPromptToDiagram }: CanvasProps) {
+  const { nodes, edges, onNodesChange, onEdgesChange, onConnect, updateNodeConfig } = useStore();
   const rfInstanceRef = useRef<ReactFlowInstance | null>(null);
   const [exportOpen, setExportOpen] = useState(false);
 
@@ -95,8 +98,26 @@ export default function Canvas({ onDrop, onOpenBlueprints }: CanvasProps) {
         labelBgStyle: { fill: '#1f2937', fillOpacity: 0.8 },
       };
       onConnect(enrichedEdge as unknown as Connection);
+
+      // ── Auto-configuration on connect ────────────────────────────────────
+      const sourceNode = nodes.find((n: Node<ResourceNodeData>) => n.id === connection.source);
+      const targetNode = nodes.find((n: Node<ResourceNodeData>) => n.id === connection.target);
+      if (!sourceNode || !targetNode) return;
+
+      const sourceType = sourceNode.data?.resourceType ?? sourceNode.data?.definition?.type ?? '';
+      const targetType = targetNode.data?.resourceType ?? targetNode.data?.definition?.type ?? '';
+
+      // If connecting a Security Group to a resource, auto-set ingress rules
+      if (sourceType === 'aws_security_group') {
+        autoConfigureSG(sourceNode, targetNode, enrichedEdge, (id, cfg) => updateNodeConfig(id, cfg));
+      } else if (targetType === 'aws_security_group') {
+        autoConfigureSG(targetNode, sourceNode, enrichedEdge, (id, cfg) => updateNodeConfig(id, cfg));
+      }
+
+      // Propagate tags from parent resources to children
+      propagateTags(sourceNode, targetNode, (id, cfg) => updateNodeConfig(id, cfg));
     },
-    [nodes, onConnect]
+    [nodes, onConnect, updateNodeConfig]
   );
 
   return (
@@ -213,6 +234,38 @@ export default function Canvas({ onDrop, onOpenBlueprints }: CanvasProps) {
                     Quick Setup — pick a blueprint
                   </span>
                 </button>
+
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 h-px" style={{ background: 'var(--border)' }} />
+                  <span className="text-[10px] px-2" style={{ color: 'var(--text-faint)' }}>or</span>
+                  <div className="flex-1 h-px" style={{ background: 'var(--border)' }} />
+                </div>
+
+                {onOpenPromptToDiagram && (
+                  <button
+                    onClick={onOpenPromptToDiagram}
+                    className="group relative flex items-center gap-2.5 font-semibold px-6 py-3 rounded-2xl text-sm transition-all duration-300 hover:scale-[1.03] active:scale-[0.97] overflow-hidden"
+                    style={{
+                      background: 'linear-gradient(135deg, rgba(99,102,241,0.15) 0%, rgba(139,92,246,0.1) 100%)',
+                      border: '1px solid rgba(99,102,241,0.3)',
+                      color: '#a5b4fc',
+                    }}
+                  >
+                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                      style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.2) 0%, rgba(139,92,246,0.15) 100%)' }} />
+                    <span className="relative flex items-center gap-2.5">
+                      <Wand2 size={16} className="text-indigo-400" />
+                      AI Prompt to Diagram
+                    </span>
+                    <span
+                      className="relative text-[8px] px-1.5 py-0.5 rounded-full font-bold"
+                      style={{ background: 'rgba(99,102,241,0.2)', color: '#a5b4fc', border: '1px solid rgba(99,102,241,0.3)' }}
+                    >
+                      NEW
+                    </span>
+                  </button>
+                )}
+
                 <p className="text-xs" style={{ color: 'var(--text-faint)' }}>or drag resources from the left panel</p>
               </div>
 

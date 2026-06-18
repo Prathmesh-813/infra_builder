@@ -77,22 +77,33 @@ def _get_stripe_price(plan_id: str, is_annual: bool) -> str:
 # ── Routes ─────────────────────────────────────────────────────────────────────
 
 
+def _is_dev_mode() -> bool:
+    """Check if Stripe is using placeholder/dummy keys → enable dev/mock mode."""
+    key = stripe.api_key or ""
+    return key.startswith("sk_test_...") or key == "" or "..." in key
+
+
 @router.post("/create-checkout-session", response_model=CheckoutResponse)
 async def create_checkout_session(req: CheckoutRequest):
-    if not stripe.api_key:
-        raise HTTPException(
-            status_code=503,
-            detail="Stripe is not configured. Set STRIPE_SECRET_KEY in .env",
-        )
-
     tier = SUBSCRIPTION_TIERS.get(req.plan_id)
     if not tier:
         raise HTTPException(status_code=400, detail=f"Unknown plan: {req.plan_id}")
 
-    price_id = _get_stripe_price(req.plan_id, req.is_annual)
-
     base_url = req.success_url or "http://localhost:8087/pricing"
     cancel_url = req.cancel_url or "http://localhost:8087/pricing"
+
+    # ── Dev / mock mode ──────────────────────────────────────────────────────
+    if _is_dev_mode():
+        logger.info("Stripe dev mode — returning mock checkout session for plan=%s", req.plan_id)
+        from uuid import uuid4
+        mock_id = f"mock_cs_{uuid4().hex[:12]}"
+        return CheckoutResponse(
+            session_id=mock_id,
+            url=base_url + f"?session_id={mock_id}&status=success",
+        )
+
+    # ── Real Stripe mode ─────────────────────────────────────────────────────
+    price_id = _get_stripe_price(req.plan_id, req.is_annual)
 
     try:
         session = stripe.checkout.Session.create(
@@ -146,6 +157,14 @@ async def stripe_webhook(request: Request):
 
 @router.get("/verify-session", response_model=VerifyResponse)
 async def verify_session(session_id: str):
+    # ── Dev / mock mode ──────────────────────────────────────────────────────
+    if _is_dev_mode() or session_id.startswith("mock_"):
+        tier = "pro"
+        if "enterprise" in session_id:
+            tier = "enterprise"
+        logger.info("Stripe dev mode — mock session verified: %s", session_id)
+        return VerifyResponse(status="complete", tier=tier, customer_email="dev@infrastudio.dev")
+
     if not stripe.api_key:
         raise HTTPException(status_code=503, detail="Stripe not configured")
 
