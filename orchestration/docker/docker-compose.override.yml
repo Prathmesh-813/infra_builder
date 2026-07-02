@@ -1,0 +1,28 @@
+# Port overrides — existing services on this host occupy 8000 and 8080.
+# Only the host-side bindings are remapped here.
+services:
+  api:
+    ports:
+      - "8100:8000"
+    environment:
+      - OZ_RUNNER=docker
+      - OZ_AGENT_NETWORK=host
+      - OZ_OPENCODE_MODEL=opencode/deepseek-v4-flash-free
+      - OZ_NVIDIA_API_KEY=${NVIDIA_API_KEY}
+
+  web:
+    ports:
+      - "3000:80"
+
+  # Skip celery worker and beat for initial testing — agents run via asyncio tasks.
+  worker:
+    profiles:
+      - celery
+  beat:
+    profiles:
+      - celery
+
+  # oz-agent is build-only, never starts as a service.
+  oz-agent:
+    profiles:
+      - build

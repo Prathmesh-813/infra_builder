@@ -1,0 +1,19 @@
+{
+  // Cloudflare Docker Agent
+  // Exposes Docker Engine REST API operations via Workers AI + Vercel AI SDK tool use.
+  // Deploy: wrangler deploy
+  // Local dev: wrangler dev --remote (AI binding requires remote mode)
+  // Auth: set the shared secret before/after deploy with:
+  //   wrangler secret put AGENT_API_KEY
+  // The Oz backend sends it as the `x-api-key` header (CF_AGENT_API_KEY).
+  "name": "cf-docker-agent",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-01-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "ai": {
+    "binding": "AI"
+  },
+  "observability": {
+    "enabled": true
+  }
+}

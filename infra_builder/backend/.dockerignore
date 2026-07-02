@@ -1,0 +1,6 @@
+.venv/
+**/__pycache__/
+*.pyc
+# Never bake credential files into the image — these are mounted at runtime.
+config/*.json
+.env

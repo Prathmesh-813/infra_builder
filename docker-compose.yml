@@ -1,0 +1,211 @@
+# Unified deployment manifest for the merged product:
+#   InfraStudio (visual IaC design) + Oz (agent orchestration / execution).
+#
+# Single public entrypoint is the `gateway` on :8080.
+#   http://localhost:8080/         -> Oz dashboard
+#   http://localhost:8080/studio/  -> InfraStudio
+#   http://localhost:8080/api/...  -> Oz API   (also direct on :8000/docs)
+#   http://localhost:8080/studio-api/... -> InfraStudio API
+#
+# One-time (build the on-demand agent sandbox image first):
+#   docker compose --profile build build oz-agent
+#   docker compose up -d --build
+name: aitsharktank
+
+services:
+  # ── On-demand agent sandbox image (built, not run as a service) ───────────
+  oz-agent:
+    build:
+      context: ./orchestration/docker/agent
+      dockerfile: Dockerfile
+    image: oz-agent:latest
+    profiles: ["build"]
+
+  # ── Warm OpenCode runtime (skips agent cold-boot) ─────────────────────────
+  oz-opencode-server:
+    image: oz-agent:latest
+    command: ["opencode", "serve"]
+    ports:
+      - "${OPENCODE_PORT:-4096}:4096"
+    environment:
+      - OPENAI_API_KEY=${OPENROUTER_API_KEY:-}
+      - OPENAI_BASE_URL=https://openrouter.ai/api/v1
+      - NVIDIA_API_KEY=${NVIDIA_API_KEY:-}
+    restart: unless-stopped
+
+  # ── Oz control-plane API ──────────────────────────────────────────────────
+  api:
+    build:
+      context: ./orchestration/backend
+      dockerfile: Dockerfile
+    ports:
+      - "${OZ_API_PORT:-8000}:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://oz:oz@db:5432/oz
+      - REDIS_URL=redis://:oz-dev@redis:6379/0
+      - SECRET_KEY=${SECRET_KEY:-change-me-in-production}
+      - OZ_RUNNER=${OZ_RUNNER:-docker}
+      - OZ_AGENT_NETWORK=${OZ_AGENT_NETWORK:-host}
+      - OZ_OPENCODE_MODEL=${OZ_OPENCODE_MODEL:-openai/gpt-4o-mini}
+      - OZ_GITHUB_TOKEN=${OZ_GITHUB_TOKEN:-}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+      - OZ_OPENCODE_SERVER_URL=
+      - CF_DOCKER_AGENT_URL=${CF_DOCKER_AGENT_URL:-}
+      - CF_SERVER_HEALTH_AGENT_URL=${CF_SERVER_HEALTH_AGENT_URL:-}
+      - CF_PROXMOX_AGENT_URL=${CF_PROXMOX_AGENT_URL:-}
+      - CF_AGENT_API_KEY=${CF_AGENT_API_KEY:-}
+      - CF_PROXMOX_ALLOW_DESTRUCTIVE=${CF_PROXMOX_ALLOW_DESTRUCTIVE:-false}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: unless-stopped
+
+  # ── Celery worker / beat ──────────────────────────────────────────────────
+  worker:
+    build:
+      context: ./orchestration/backend
+      dockerfile: Dockerfile
+    command: celery -A app.worker.scheduler.celery_app worker --loglevel=info --pool=solo
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://oz:oz@db:5432/oz
+      - REDIS_URL=redis://:oz-dev@redis:6379/0
+      - SECRET_KEY=${SECRET_KEY:-change-me-in-production}
+      - CF_DOCKER_AGENT_URL=${CF_DOCKER_AGENT_URL:-}
+      - CF_SERVER_HEALTH_AGENT_URL=${CF_SERVER_HEALTH_AGENT_URL:-}
+      - CF_PROXMOX_AGENT_URL=${CF_PROXMOX_AGENT_URL:-}
+      - CF_AGENT_API_KEY=${CF_AGENT_API_KEY:-}
+      - CF_PROXMOX_ALLOW_DESTRUCTIVE=${CF_PROXMOX_ALLOW_DESTRUCTIVE:-false}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: unless-stopped
+
+  beat:
+    build:
+      context: ./orchestration/backend
+      dockerfile: Dockerfile
+    command: celery -A app.worker.scheduler.celery_app beat --loglevel=info
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://oz:oz@db:5432/oz
+      - REDIS_URL=redis://:oz-dev@redis:6379/0
+      - SECRET_KEY=${SECRET_KEY:-change-me-in-production}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: unless-stopped
+
+  # ── Datastores ────────────────────────────────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=oz
+      - POSTGRES_PASSWORD=oz
+      - POSTGRES_DB=oz
+    expose:
+      - "5432"
+    volumes:
+      - oz_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U oz"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    expose:
+      - "6379"
+    command: redis-server --requirepass oz-dev --rename-command SLAVEOF "" --rename-command REPLICAOF "" --rename-command CONFIG ""
+    restart: unless-stopped
+
+  # ── Leon AI assistant ─────────────────────────────────────────────────────
+  leon:
+    build:
+      context: ./orchestration/leon
+      dockerfile: ../docker/leon/Dockerfile
+    ports:
+      - "${LEON_PORT_HOST:-5366}:5366"
+    environment:
+      LEON_NODE_ENV: production
+      LEON_PORT: "5366"
+      LEON_HOST: http://0.0.0.0
+      LEON_LANG: en-US
+      LEON_LLM: ${LEON_LLM:-groq/meta-llama/llama-4-scout-17b-16e-instruct}
+      LEON_GROQ_API_KEY: ${GROQ_API_KEY:-}
+      LEON_OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      LEON_COMMANDCODE_API_KEY: ${LEON_COMMANDCODE_API_KEY:-}
+      LEON_CLOUDFLARE_API_TOKEN: ${CLOUDFLARE_API_TOKEN:-}
+      LEON_CLOUDFLARE_ACCOUNT_ID: ${CLOUDFLARE_ACCOUNT_ID:-}
+      LEON_OVER_HTTP: "true"
+      LEON_WAKE_WORD: "false"
+      LEON_STT: "false"
+      LEON_TTS: "false"
+      LEON_ROUTING_MODE: controlled
+      LEON_AFTER_SPEECH: "false"
+      LEON_TELEMETRY: "false"
+      LEON_TIME_ZONE: UTC
+      LEON_HTTP_API_KEY: ${LEON_HTTP_API_KEY:-dev-key-123}
+      OZ_API_URL: http://api:8000/api
+      OZ_EMAIL: ${OZ_ADMIN_EMAIL:-admin@oz.local}
+      OZ_PASSWORD: ${OZ_ADMIN_PASSWORD:-admin123}
+      OZ_DEFAULT_AGENT_TYPE: opencode
+      OZ_DEFAULT_MAX_RUNTIME: "300"
+      OZ_PUBLIC_URL: http://localhost:8080
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    volumes:
+      - leon_profile:/root/.leon
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./orchestration/leon/skills/native/oz_skill:/app/leon/skills/native/oz_skill
+      - ./orchestration/leon/skills/native/is_it_down_skill:/app/leon/skills/native/is_it_down_skill
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  # ── InfraStudio API (pricing / AI / stripe / settings) ────────────────────
+  infrastudio-api:
+    build:
+      context: ./infra_builder/backend
+      dockerfile: Dockerfile
+    expose:
+      - "8001"
+    environment:
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-}
+      - STRIPE_PRICE_PRO_MONTHLY=${STRIPE_PRICE_PRO_MONTHLY:-}
+      - STRIPE_PRICE_PRO_ANNUAL=${STRIPE_PRICE_PRO_ANNUAL:-}
+      - STRIPE_PRICE_ENTERPRISE_MONTHLY=${STRIPE_PRICE_ENTERPRISE_MONTHLY:-}
+      - STRIPE_PRICE_ENTERPRISE_ANNUAL=${STRIPE_PRICE_ENTERPRISE_ANNUAL:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+    volumes:
+      # Persist AWS/GCP credential JSON written via the settings API.
+      - infrastudio_config:/app/backend/config
+    restart: unless-stopped
+
+  # ── Unified gateway (single public entrypoint) ────────────────────────────
+  gateway:
+    build:
+      context: .
+      dockerfile: gateway/Dockerfile
+    ports:
+      - "${GATEWAY_PORT:-8080}:80"
+    depends_on:
+      - api
+      - infrastudio-api
+    restart: unless-stopped
+
+volumes:
+  oz_pg_data:
+  leon_profile:
+  infrastudio_config:

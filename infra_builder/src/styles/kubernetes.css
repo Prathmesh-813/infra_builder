@@ -1,0 +1,1390 @@
+:root {
+  --k8s-blue: #326ce5;
+  --k8s-blue-dark: #1a4fb4;
+  --card-border: #e5e7eb;
+  --card-bg: #ffffff;
+  --panel-bg: #f7f7f2;
+  --text-muted: #6b7280;
+}
+
+.k8s-root {
+  background: #ffffff;
+  color: #111827;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+.k8s-root a {
+  color: var(--k8s-blue);
+}
+
+/* ---- Topic Card ---- */
+
+.topic-card {
+  border: 1px solid var(--card-border);
+  border-radius: 0.75rem;
+  margin-bottom: 1rem;
+  background: var(--card-bg);
+  overflow: hidden;
+}
+
+.topic-card__header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  padding: 1rem 1.25rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+}
+
+.topic-card__index {
+  color: #9ca3af;
+  font-size: 0.95rem;
+  width: 1.5rem;
+  flex-shrink: 0;
+}
+
+.topic-card__heading {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.topic-card__title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.topic-card__blurb {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  margin-top: 0.15rem;
+}
+
+.topic-card__level {
+  font-size: 0.8rem;
+  font-weight: 500;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.topic-card__check {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 999px;
+  border: 1.5px solid #d1d5db;
+  background: transparent;
+  color: transparent;
+  flex-shrink: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  transition: all 0.15s ease;
+}
+
+.topic-card__check[data-complete="true"] {
+  background: #16a34a;
+  border-color: #16a34a;
+  color: white;
+}
+
+.topic-card__body {
+  border-top: 1px solid var(--card-border);
+}
+
+.topic-card__tabs {
+  display: flex;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--card-border);
+  background: var(--card-bg);
+}
+
+.topic-card__tab {
+  padding: 0.85rem 1.1rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  font: inherit;
+}
+
+.topic-card__tab[data-active="true"] {
+  color: #111827;
+  border-bottom-color: #111827;
+}
+
+.topic-card__panel {
+  padding: 1.5rem;
+  background: var(--panel-bg);
+  line-height: 1.65;
+}
+
+.topic-card__qa-item {
+  margin-bottom: 1.1rem;
+}
+
+.topic-card__qa-q {
+  font-weight: 600;
+  margin: 0 0 0.25rem;
+}
+
+.topic-card__qa-a {
+  color: #374151;
+  margin: 0;
+}
+
+/* ---- Markdown rendering inside panels ---- */
+
+.markdown-block p {
+  margin: 0 0 1rem;
+}
+
+.markdown-block ul,
+.markdown-block ol {
+  margin: 0 0 1rem;
+  padding-left: 1.4rem;
+}
+
+.markdown-block li {
+  margin-bottom: 0.4rem;
+}
+
+.markdown-block table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+}
+
+.markdown-block th,
+.markdown-block td {
+  border: 1px solid var(--card-border);
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+}
+
+.markdown-block th {
+  background: #f1f1eb;
+}
+
+.markdown-empty {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.inline-code {
+  background: #eef0f4;
+  border-radius: 0.25rem;
+  padding: 0.1rem 0.35rem;
+  font-size: 0.85em;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.code-block {
+  border-radius: 0.5rem;
+  overflow: hidden;
+  margin: 1rem 0;
+  border: 1px solid var(--card-border);
+}
+
+.code-block__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #2d2d2d;
+  color: #ccc;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+/* ---- App shell ---- */
+
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: #ffffff;
+  border-bottom: 1px solid var(--card-border);
+  padding: 0.85rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.app-header__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 700;
+  font-size: 1.05rem;
+  text-decoration: none;
+  color: #111827;
+}
+
+.app-shell {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 2rem 1.25rem 4rem;
+}
+
+/* ---- Kubernetes Search ---- */
+
+.k8s-search {
+  position: relative;
+  width: 100%;
+  max-width: 360px;
+}
+
+.k8s-search__input {
+  width: 100%;
+  padding: 0.5rem 0.85rem;
+  border: 1px solid var(--card-border);
+  border-radius: 0.6rem;
+  font-size: 0.85rem;
+  background: #f9fafb;
+}
+
+.k8s-search__input:focus {
+  outline: none;
+  border-color: var(--k8s-blue);
+  background: #ffffff;
+}
+
+.k8s-search__results {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  left: 0;
+  right: 0;
+  background: #ffffff;
+  border: 1px solid var(--card-border);
+  border-radius: 0.75rem;
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.2);
+  max-height: 360px;
+  overflow-y: auto;
+  z-index: 50;
+}
+
+.k8s-search__empty {
+  padding: 0.75rem 1rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.k8s-search__result {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  text-align: left;
+  padding: 0.6rem 1rem;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+}
+
+.k8s-search__result:hover,
+.k8s-search__result[data-active="true"] {
+  background: #f3f4f6;
+}
+
+.k8s-search__result-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.k8s-search__result-sub {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.section-title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  margin-bottom: 0.4rem;
+}
+
+.section-description {
+  color: var(--text-muted);
+  margin-bottom: 1.75rem;
+}
+
+.k8s-card {
+  border-radius: 0.75rem;
+  border: 1px solid var(--card-border);
+  transition: border-color 0.15s ease, transform 0.1s ease;
+  display: block;
+  padding: 1rem;
+  text-decoration: none;
+}
+
+.k8s-card:hover {
+  border-color: var(--k8s-blue);
+  transform: translateY(-1px);
+}
+
+/* ---- Path Choice: "Kubernetes" vs "Container" top-level picker ---- */
+
+.path-choice {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1rem;
+  margin: 1.25rem 0 1.75rem;
+}
+
+.path-choice__card {
+  display: block;
+  text-decoration: none;
+  border-radius: 1rem;
+  border: 1.5px solid var(--card-border);
+  background: var(--card-bg);
+  padding: 1.5rem;
+  transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.path-choice__card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.18);
+}
+
+.path-choice__eyebrow {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+}
+
+.path-choice__title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 0.4rem;
+}
+
+.path-choice__desc {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin-bottom: 0.75rem;
+}
+
+.path-choice__cta {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+/* ---- Roadmap ---- */
+
+.roadmap {
+  margin: 1.5rem 0 1rem;
+}
+
+.roadmap__title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin-bottom: 0.4rem;
+}
+
+.roadmap__intro {
+  color: var(--text-muted);
+  margin-bottom: 1.25rem;
+  max-width: 760px;
+}
+
+.roadmap__phases {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  position: relative;
+}
+
+.roadmap__phases::before {
+  content: "";
+  position: absolute;
+  left: 1.05rem;
+  top: 0.5rem;
+  bottom: 0.5rem;
+  width: 2px;
+  background: linear-gradient(to bottom, var(--k8s-blue), #e5e7eb);
+}
+
+.roadmap__phase {
+  position: relative;
+  margin-left: 2.25rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  padding: 1rem 1.25rem;
+}
+
+.roadmap__phase::before {
+  content: "";
+  position: absolute;
+  left: -1.95rem;
+  top: 1.15rem;
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 999px;
+  background: var(--k8s-blue);
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 2px var(--k8s-blue);
+}
+
+.roadmap__phase-header {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  margin-bottom: 0.3rem;
+}
+
+.roadmap__phase-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--k8s-blue);
+}
+
+.roadmap__phase-duration {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.roadmap__phase-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 0 0 0.4rem;
+}
+
+.roadmap__phase-focus {
+  font-size: 0.9rem;
+  color: #374151;
+  line-height: 1.55;
+  margin: 0 0 0.6rem;
+}
+
+.roadmap__phase-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.6rem;
+}
+
+.roadmap__phase-link {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--k8s-blue);
+  text-decoration: none;
+  border: 1px solid var(--k8s-blue);
+  border-radius: 999px;
+  padding: 0.2rem 0.7rem;
+}
+
+.roadmap__phase-link:hover {
+  background: var(--k8s-blue);
+  color: #fff;
+}
+
+.roadmap__phase-done {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin: 0;
+  padding-top: 0.5rem;
+  border-top: 1px dashed var(--card-border);
+}
+
+/* ---- Architecture diagram ---- */
+
+.arch-diagram {
+  margin: 2rem 0 1.5rem;
+}
+
+.arch-diagram__canvas {
+  border-radius: 1rem;
+  border: 1px solid var(--card-border);
+  background: linear-gradient(180deg, #fafbff 0%, #ffffff 60%);
+  padding: 1.75rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.arch-diagram__actor {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.arch-diagram__actor-box {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #111827;
+  background: #fff7e6;
+  border: 1.5px solid #f59e0b;
+  border-radius: 0.6rem;
+  padding: 0.5rem 1.1rem;
+}
+
+.arch-diagram__arrow-down {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 0.4rem 0;
+}
+
+.arch-diagram__arrow-down span {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-style: italic;
+  margin-bottom: 0.15rem;
+}
+
+.arch-diagram__arrow-line {
+  width: 2px;
+  height: 1.4rem;
+  background: var(--k8s-blue);
+  position: relative;
+}
+
+.arch-diagram__arrow-line::after {
+  content: "";
+  position: absolute;
+  bottom: -1px;
+  left: -4px;
+  border: 5px solid transparent;
+  border-top-color: var(--k8s-blue);
+}
+
+.arch-diagram__group {
+  width: 100%;
+  border-radius: 0.85rem;
+  padding: 1rem 1.1rem 1.2rem;
+}
+
+.arch-diagram__group--control {
+  background: #eef2ff;
+  border: 1.5px solid #6366f1;
+}
+
+.arch-diagram__group-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #4338ca;
+  margin-bottom: 0.7rem;
+  text-align: center;
+}
+
+.arch-diagram__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  justify-content: center;
+}
+
+.arch-diagram__chip {
+  background: #ffffff;
+  border: 1px solid #c7d2fe;
+  border-radius: 0.6rem;
+  padding: 0.55rem 0.8rem;
+  min-width: 150px;
+  max-width: 190px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+}
+
+.arch-diagram__chip--api {
+  border-color: var(--k8s-blue);
+  background: #eaf1fd;
+}
+
+.arch-diagram__chip--etcd {
+  border-color: #d97706;
+  background: #fff7e6;
+}
+
+.arch-diagram__chip-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 0.15rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.arch-diagram__chip-desc {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  line-height: 1.35;
+}
+
+.arch-diagram__etcd-note {
+  margin-top: 0.8rem;
+  font-size: 0.74rem;
+  color: #4338ca;
+  text-align: center;
+}
+
+.arch-diagram__nodes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: center;
+  width: 100%;
+}
+
+.arch-diagram__node {
+  flex: 1;
+  min-width: 260px;
+  max-width: 320px;
+  border-radius: 0.85rem;
+  border: 1.5px solid #10b981;
+  background: #ecfdf5;
+  padding: 0.9rem 1rem 1.1rem;
+}
+
+.arch-diagram__node-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #047857;
+  text-align: center;
+  margin-bottom: 0.6rem;
+}
+
+.arch-diagram__chips--node {
+  flex-direction: column;
+}
+
+.arch-diagram__chip--small {
+  min-width: unset;
+  max-width: unset;
+  width: 100%;
+}
+
+.arch-diagram__pods {
+  display: flex;
+  gap: 0.4rem;
+  justify-content: center;
+  margin-top: 0.7rem;
+}
+
+.arch-diagram__pod {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #fff;
+  background: var(--k8s-blue);
+  border-radius: 999px;
+  padding: 0.2rem 0.7rem;
+}
+
+.arch-diagram__legend {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  font-size: 0.85rem;
+  color: #374151;
+  line-height: 1.55;
+}
+
+/* ---- Controller Manager sub-controllers ---- */
+
+.arch-diagram__group--cm {
+  background: #fdf4ff;
+  border: 1.5px solid #c026d3;
+  margin-top: 0;
+}
+
+.arch-diagram__group-label--cm {
+  color: #a21caf;
+}
+
+.arch-diagram__chips--cm {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 0.55rem;
+}
+
+.arch-diagram__chip--cm {
+  background: #ffffff;
+  border: 1px solid #f0abfc;
+  min-width: unset;
+  max-width: unset;
+  padding: 0.5rem 0.7rem;
+}
+
+.arch-diagram__chip--cm .arch-diagram__chip-label {
+  font-size: 0.74rem;
+}
+
+.arch-diagram__chip--cm .arch-diagram__chip-desc {
+  font-size: 0.68rem;
+}
+
+.arch-diagram__chip--cm-highlight {
+  border-color: #c026d3;
+  background: #fae8ff;
+  box-shadow: 0 0 0 1px #c026d3;
+}
+
+/* ---- Trace: kubectl apply -f deployment.yaml walkthrough ---- */
+
+.arch-trace__title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin: 2rem 0 0.4rem;
+}
+
+.arch-trace__title code {
+  background: #eef0f4;
+  border-radius: 0.25rem;
+  padding: 0.1rem 0.4rem;
+  font-size: 0.85em;
+}
+
+.arch-trace {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  position: relative;
+  margin: 1rem 0;
+}
+
+.arch-trace__step {
+  display: flex;
+  gap: 1rem;
+  padding-bottom: 1.4rem;
+  position: relative;
+}
+
+.arch-trace__step:not(:last-child)::before {
+  content: "";
+  position: absolute;
+  left: 0.95rem;
+  top: 2.1rem;
+  bottom: 0;
+  width: 2px;
+  background: #e5e7eb;
+}
+
+.arch-trace__num {
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  background: var(--k8s-blue);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
+
+.arch-trace__num--hl {
+  background: #c026d3;
+}
+
+.arch-trace__body {
+  flex: 1;
+  border: 1px solid var(--card-border);
+  border-radius: 0.65rem;
+  padding: 0.7rem 0.9rem;
+  background: var(--card-bg);
+}
+
+.arch-trace__actor {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--k8s-blue);
+}
+
+.arch-trace__action {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #111827;
+  margin: 0.1rem 0 0.35rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.arch-trace__detail {
+  font-size: 0.85rem;
+  color: #374151;
+  line-height: 1.55;
+  margin: 0;
+}
+
+/* ---- Workload Controller Comparison (Pod vs ReplicaSet vs Deployment) ---- */
+
+.wcc__scenarios {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1rem;
+  margin: 1rem 0 1.5rem;
+  align-items: start;
+}
+
+.wcc__card {
+  border-radius: 0.85rem;
+  border: 1.5px solid var(--card-border);
+  background: var(--card-bg);
+  padding: 1rem 1.1rem 1.2rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.wcc__card--gray {
+  border-color: #9ca3af;
+  background: #f9fafb;
+}
+
+.wcc__card--blue {
+  border-color: var(--k8s-blue);
+  background: #eef4fd;
+}
+
+.wcc__card--purple {
+  border-color: #c026d3;
+  background: #fdf4ff;
+}
+
+.wcc__card--teal {
+  border-color: #0d9488;
+  background: #f0fdfa;
+}
+
+.wcc__card--orange {
+  border-color: #ea580c;
+  background: #fff7ed;
+}
+
+.wcc__card--green {
+  border-color: #16a34a;
+  background: #f0fdf4;
+}
+
+.wcc__card--indigo {
+  border-color: #4f46e5;
+  background: #eef2ff;
+}
+
+.wcc__card-title {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0 0 0.4rem;
+  color: #111827;
+}
+
+.wcc__card-cmd {
+  display: inline-block;
+  font-size: 0.72rem;
+  background: #1e1e1e;
+  color: #d4d4d4;
+  border-radius: 0.4rem;
+  padding: 0.3rem 0.55rem;
+  margin-bottom: 0.8rem;
+  word-break: break-word;
+}
+
+.wcc__yaml {
+  background: #1e1e1e;
+  border-radius: 0.5rem;
+  padding: 0.7rem 0.85rem;
+  margin: 0 0 0.6rem;
+  overflow-x: auto;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.wcc__yaml code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.7rem;
+  line-height: 1.55;
+  color: #d4d4d4;
+  white-space: pre;
+}
+
+.wcc__usecase {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.8rem;
+  margin-top: 0.4rem;
+}
+
+.wcc__subhead {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-muted);
+  margin: 0.7rem 0 0.4rem;
+}
+
+.wcc__subhead--pro {
+  color: #047857;
+}
+
+.wcc__subhead--con {
+  color: #b91c1c;
+}
+
+.wcc__controller-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.wcc__controller {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.wcc__controller-icon {
+  flex-shrink: 0;
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: 999px;
+  font-size: 0.65rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  margin-top: 0.1rem;
+}
+
+.wcc__controller--yes .wcc__controller-icon {
+  background: #d1fae5;
+  color: #047857;
+}
+
+.wcc__controller--no .wcc__controller-icon {
+  background: #f3f4f6;
+  color: #9ca3af;
+}
+
+.wcc__controller--no {
+  color: #9ca3af;
+}
+
+.wcc__flow {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.8rem;
+  line-height: 1.55;
+  color: #374151;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.wcc__text {
+  font-size: 0.82rem;
+  color: #374151;
+  line-height: 1.55;
+  margin: 0;
+}
+
+.wcc__proscons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.8rem;
+  margin-top: 0.4rem;
+}
+
+.wcc__list {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: #374151;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.wcc__summary {
+  overflow-x: auto;
+  margin-top: 1.5rem;
+}
+
+.wcc__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.wcc__table th,
+.wcc__table td {
+  border: 1px solid var(--card-border);
+  padding: 0.5rem 0.65rem;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.wcc__table th {
+  background: #f1f1eb;
+  font-weight: 700;
+}
+
+.wcc__table--workloads tr:nth-child(3) td {
+  background: #fdf4ff;
+  font-weight: 600;
+}
+
+.wcc__table--wrap th,
+.wcc__table--wrap td {
+  white-space: normal;
+  vertical-align: top;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+/* ---- Stateless vs Stateful head-to-head diagram ---- */
+
+.svs {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  margin: 1.25rem 0 1.5rem;
+  border-radius: 1rem;
+  overflow: hidden;
+  border: 1px solid var(--card-border);
+}
+
+.svs__col {
+  flex: 1;
+  padding: 1.25rem 1.4rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.svs__col--stateless {
+  background: #f5f3ff;
+}
+
+.svs__col--stateful {
+  background: #f0fdfa;
+}
+
+.svs__divider {
+  flex-shrink: 0;
+  width: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #fff;
+  background: #111827;
+}
+
+.svs__col-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  margin-bottom: 0.15rem;
+  color: #111827;
+}
+
+.svs__col--stateless .svs__col-title {
+  color: #6d28d9;
+}
+
+.svs__col--stateful .svs__col-title {
+  color: #0f766e;
+}
+
+.svs__col-sub {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-bottom: 1rem;
+}
+
+.svs__pods {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.svs__pod-block {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.svs__pod {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #fff;
+  border-radius: 0.5rem;
+  padding: 0.45rem 0.75rem;
+  flex: 1;
+}
+
+.svs__pod--stateless {
+  background: #7c3aed;
+}
+
+.svs__pod--stateful {
+  background: #0d9488;
+}
+
+.svs__pod-storage {
+  font-size: 0.7rem;
+  font-weight: 600;
+  border-radius: 0.4rem;
+  padding: 0.35rem 0.55rem;
+  white-space: nowrap;
+}
+
+.svs__pod-storage--none {
+  background: #e5e7eb;
+  color: #6b7280;
+  font-style: italic;
+}
+
+.svs__pod-storage--has {
+  background: #ccfbf1;
+  color: #0f766e;
+}
+
+.svs__caption {
+  font-size: 0.82rem;
+  color: #374151;
+  line-height: 1.55;
+  margin-bottom: 0.8rem;
+}
+
+.svs__facts {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.78rem;
+  color: #374151;
+  line-height: 1.6;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+/* ---- Ratings matrix chart (bar-style) ---- */
+
+.vchart__matrix {
+  border: 1px solid var(--card-border);
+  border-radius: 0.85rem;
+  overflow-x: auto;
+  padding: 1rem 1.1rem;
+  background: var(--card-bg);
+}
+
+.vchart__matrix-header {
+  display: grid;
+  grid-template-columns: 130px repeat(5, minmax(140px, 1fr));
+  gap: 0.5rem;
+  margin-bottom: 0.6rem;
+}
+
+.vchart__matrix-corner {
+  /* empty top-left cell */
+}
+
+.vchart__matrix-col-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  line-height: 1.3;
+}
+
+.vchart__matrix-row {
+  display: grid;
+  grid-template-columns: 130px repeat(5, minmax(140px, 1fr));
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.45rem 0;
+  border-top: 1px solid #f3f4f6;
+}
+
+.vchart__matrix-row-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.vchart__matrix-cell {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.vchart__bar-row {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.vchart__bar-track {
+  position: relative;
+  width: 100%;
+  height: 0.85rem;
+  background: #f3f4f6;
+  border-radius: 999px;
+  overflow: hidden;
+  flex: 1;
+}
+
+.vchart__bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.2s ease;
+}
+
+.vchart__bar-value {
+  flex-shrink: 0;
+  font-size: 0.62rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin-left: 0.4rem;
+}
+
+/* ---- Explainer blocks: what is Deployment/StatefulSet actually for ---- */
+
+.vchart__explainer {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+  margin: 1rem 0 1.5rem;
+}
+
+.vchart__explainer-block {
+  border-radius: 0.75rem;
+  border: 1px solid var(--card-border);
+  background: #fafafa;
+  padding: 1rem 1.1rem;
+}
+
+.vchart__explainer-title {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 0.5rem;
+}
+
+/* ---- Scenario picker table ---- */
+
+.vchart__scenario-table {
+  border: 1px solid var(--card-border);
+  border-radius: 0.75rem;
+  overflow: hidden;
+  margin-bottom: 1.5rem;
+}
+
+.vchart__scenario-row {
+  display: grid;
+  grid-template-columns: 1.6fr 0.7fr 1.6fr;
+  gap: 0.75rem;
+  padding: 0.6rem 0.9rem;
+  font-size: 0.82rem;
+  color: #374151;
+  border-top: 1px solid #f3f4f6;
+  align-items: center;
+}
+
+.vchart__scenario-row:first-child {
+  border-top: none;
+}
+
+.vchart__scenario-row--head {
+  background: #f1f1eb;
+  font-weight: 700;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-muted);
+}
+
+.vchart__scenario-pick {
+  font-weight: 700;
+  font-size: 0.78rem;
+  border-radius: 999px;
+  padding: 0.2rem 0.6rem;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.vchart__scenario-pick--deploy {
+  background: #fae8ff;
+  color: #a21caf;
+}
+
+.vchart__scenario-pick--sts {
+  background: #ccfbf1;
+  color: #0f766e;
+}
+
+/* YAML block sized down to fit inside the stateless/stateful columns */
+
+.svs__yaml {
+  margin-top: 0.9rem;
+  max-height: 230px;
+}
+
+/* ---- Security: defense-in-depth stacked layers ---- */
+
+.sec-layers {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  margin: 1rem 0 1.5rem;
+}
+
+.sec-layers__layer {
+  border: 1.5px solid;
+  border-left-width: 6px;
+  border-radius: 0.6rem;
+  background: #fff;
+  padding: 0.7rem 1rem;
+  display: flex;
+  align-items: baseline;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+
+.sec-layers__name {
+  font-size: 0.88rem;
+  font-weight: 800;
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-width: 190px;
+}
+
+.sec-layers__desc {
+  font-size: 0.82rem;
+  color: #374151;
+  line-height: 1.5;
+}

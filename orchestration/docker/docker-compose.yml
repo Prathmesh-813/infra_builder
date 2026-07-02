@@ -1,0 +1,162 @@
+services:
+  # oz-agent is not a long-running service — it's built as a reusable image that
+  # the API spawns on demand via DockerAgentRunner. Build it with:
+  #   docker compose build oz-agent
+  oz-agent:
+    build:
+      context: ./agent
+      dockerfile: Dockerfile
+    image: oz-agent:latest
+    profiles:
+      - build
+
+  # Persistent opencode server — keeps the opencode runtime warm so agent runs
+  # skip the 8-15s cold-boot cost. Each `opencode run --attach` gets a fresh
+  # isolated session but reuses the already-started process and MCP connections.
+  # Requires oz-agent image to be built first (docker compose --profile build build oz-agent).
+  oz-opencode-server:
+    image: oz-agent:latest
+    command: ["opencode", "serve"]
+    ports:
+      - "4096:4096"
+    environment:
+      - OPENAI_API_KEY=${OPENROUTER_API_KEY:-}
+      - OPENAI_BASE_URL=https://openrouter.ai/api/v1
+      - NVIDIA_API_KEY=${NVIDIA_API_KEY:-}
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://oz:oz@db:5432/oz
+      - REDIS_URL=redis://:oz-dev@redis:6379/0
+      - SECRET_KEY=change-me-in-production
+      - OZ_RUNNER=docker
+      - OZ_AGENT_NETWORK=host
+      - OZ_OPENCODE_MODEL=openai/gpt-4o-mini
+      - OZ_GITHUB_TOKEN=${OZ_GITHUB_TOKEN:-}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+      - OZ_OPENCODE_SERVER_URL=
+      - CF_DOCKER_AGENT_URL=${CF_DOCKER_AGENT_URL:-}
+      - CF_SERVER_HEALTH_AGENT_URL=${CF_SERVER_HEALTH_AGENT_URL:-}
+      - CF_PROXMOX_AGENT_URL=${CF_PROXMOX_AGENT_URL:-}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  web:
+    image: nginx:alpine
+    ports:
+      - "8090:80"
+    volumes:
+      - ../web:/usr/share/nginx/html:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - api
+
+  worker:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    command: celery -A app.worker.scheduler.celery_app worker --loglevel=info --pool=solo
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://oz:oz@db:5432/oz
+      - REDIS_URL=redis://:oz-dev@redis:6379/0
+      - SECRET_KEY=change-me-in-production
+      - CF_DOCKER_AGENT_URL=${CF_DOCKER_AGENT_URL:-}
+      - CF_SERVER_HEALTH_AGENT_URL=${CF_SERVER_HEALTH_AGENT_URL:-}
+      - CF_PROXMOX_AGENT_URL=${CF_PROXMOX_AGENT_URL:-}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  beat:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    command: celery -A app.worker.scheduler.celery_app beat --loglevel=info
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://oz:oz@db:5432/oz
+      - REDIS_URL=redis://:oz-dev@redis:6379/0
+      - SECRET_KEY=change-me-in-production
+    depends_on:
+      redis:
+        condition: service_started
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=oz
+      - POSTGRES_PASSWORD=oz
+      - POSTGRES_DB=oz
+    expose:
+      - "5432"
+    volumes:
+      - oz_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U oz"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    expose:
+      - "6379"
+    command: redis-server --requirepass oz-dev --rename-command SLAVEOF "" --rename-command REPLICAOF "" --rename-command CONFIG ""
+
+  leon:
+    build:
+      context: ../leon
+      dockerfile: ../docker/leon/Dockerfile
+    ports:
+      - "5366:5366"
+    environment:
+      LEON_NODE_ENV: production
+      LEON_PORT: "5366"
+      LEON_HOST: http://0.0.0.0
+      LEON_LANG: en-US
+      LEON_LLM: groq/llama-3.1-8b-instant
+      LEON_GROQ_API_KEY: ${GROQ_API_KEY}
+      LEON_OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+      LEON_COMMANDCODE_API_KEY: ${LEON_COMMANDCODE_API_KEY}
+      LEON_CLOUDFLARE_API_TOKEN: ${CLOUDFLARE_API_TOKEN}
+      LEON_CLOUDFLARE_ACCOUNT_ID: ${CLOUDFLARE_ACCOUNT_ID}
+      LEON_OVER_HTTP: "true"
+      LEON_WAKE_WORD: "false"
+      LEON_STT: "false"
+      LEON_TTS: "false"
+      LEON_ROUTING_MODE: controlled
+      LEON_AFTER_SPEECH: "false"
+      LEON_TELEMETRY: "false"
+      LEON_TIME_ZONE: UTC
+      LEON_HTTP_API_KEY: dev-key-123
+      OZ_API_URL: http://api:8000/api
+      OZ_EMAIL: admin@oz.local
+      OZ_PASSWORD: admin123
+      OZ_DEFAULT_AGENT_TYPE: opencode
+      OZ_DEFAULT_MAX_RUNTIME: "300"
+      OZ_PUBLIC_URL: http://localhost:8090
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    volumes:
+      - leon_profile:/root/.leon
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ../leon/skills/native/oz_skill:/app/leon/skills/native/oz_skill
+      - ../leon/skills/native/is_it_down_skill:/app/leon/skills/native/is_it_down_skill
+
+volumes:
+  oz_pg_data:
+  leon_profile:

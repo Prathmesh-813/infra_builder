@@ -1,0 +1,12 @@
+fastapi==0.111.0
+uvicorn[standard]==0.30.1
+boto3==1.34.144
+httpx==0.27.0
+pydantic==2.7.4
+python-dotenv==1.0.1
+google-auth==2.29.0
+urllib3==2.2.2
+# Required by google.auth.transport.urllib3 (the GCP pricing client) — not pulled
+# in transitively, so the container crashes on import without it.
+packaging==24.1
+stripe==11.4.1

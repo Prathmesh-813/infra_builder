@@ -1,0 +1,17 @@
+{
+  // Cloudflare Server Health Agent
+  // Checks system health via Docker Engine API: containers, CPU/mem, disk, load.
+  // Deploy: wrangler deploy
+  // Local dev: wrangler dev --remote (AI binding requires remote mode)
+  // Auth: wrangler secret put AGENT_API_KEY  (Oz sends it as the x-api-key header)
+  "name": "cf-server-health-agent",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-01-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "ai": {
+    "binding": "AI"
+  },
+  "observability": {
+    "enabled": true
+  }
+}
